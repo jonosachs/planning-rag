@@ -1,4 +1,4 @@
-from ingest import ClauseDoc
+from src.ingest import ClauseDoc
 from dataclasses import dataclass
 
 
@@ -17,6 +17,13 @@ class MetaData:
 class Chunk:
     text: str
     metadata: MetaData
+
+
+def batch_chunk(scheme_clauses: list[ClauseDoc]):
+    chunks = []
+    for clause in scheme_clauses:
+        chunks.extend(chunk_clause(clause))
+    return chunks
 
 
 def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:

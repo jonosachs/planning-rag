@@ -2,3 +2,5 @@ httpx
 beautifulsoup4
 google-genai
 python-dotenv
+chromadb
+pydantic

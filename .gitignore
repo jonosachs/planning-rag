@@ -2,3 +2,5 @@
 .venv
 *.md
 __pycache__/
+chroma_db/
+embedded_chunks.txt

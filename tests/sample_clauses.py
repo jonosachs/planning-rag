@@ -1,4 +1,4 @@
-from ingest import ClauseDoc
+from src.ingest import ClauseDoc
 
 sample_clauses = [
     ClauseDoc(
