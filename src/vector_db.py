@@ -6,8 +6,14 @@ import chromadb
 client = chromadb.PersistentClient(path="./chroma_db")
 
 
-def delete_db_collection(name):
-    client.delete_collection(name)
+def delete_db_collection_if_exists(name):
+    if collection_exists(name):
+        client.delete_collection(name)
+
+
+def collection_exists(name):
+    collections = client.list_collections()
+    return any(c.name == name for c in collections)
 
 
 # Add documents with embeddings
@@ -17,7 +23,7 @@ def write_to_db(name: str, embedded_chunks: list[EmbeddedChunk]):
         md = chunk.metadata
         if type(md) is dict:
             md = MetaData(**md)
-        doc_id = f"{md.scheme_id}:{md.semantic_number}:{md.chunk_index}"
+        doc_id = f"{md.scheme_id}:{md.ordinance_id}:{md.chunk_index}"
         try:
             collection.upsert(
                 ids=[doc_id],
@@ -26,7 +32,7 @@ def write_to_db(name: str, embedded_chunks: list[EmbeddedChunk]):
                 metadatas=[asdict(md)],
             )
         except ValueError as e:
-            raise RuntimeError(f"Failed to write to db: {e}") from e
+            raise RuntimeError(f"⚠️ Failed to write to db: {e}") from e
 
 
 # Query by vector similarity

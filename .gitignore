@@ -4,3 +4,4 @@
 __pycache__/
 chroma_db/
 embedded_chunks.txt
+chunks.json

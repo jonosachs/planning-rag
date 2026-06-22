@@ -13,12 +13,22 @@ API_KEY = os.environ["GEMINI_API_KEY"]
 CLIENT = genai.Client(api_key=API_KEY)
 
 
+class Citation(BaseModel):
+    scheme_id: str
+    ordinance_id: str
+    chunk_index: str
+    title: str
+
+
 class Response(BaseModel):
     answer: str = Field(
         description="Answer if it can be deduced from the context. Otherwise say you don't know."
     )
-    citation: Optional[str] = Field(
-        description="Citation for your answer from the context provided, made up of scheme_id:semantic_number:title, e.g. melb:02.01:CONTEXT. Only 'None' if the answer is not in the context",
+    citations: Optional[list[Citation]] = Field(
+        description="""
+        Citations for all context used in your answer. 
+        Only 'None' if the answer is not in the context
+        """,
         default=None,
     )
 

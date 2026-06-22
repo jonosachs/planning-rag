@@ -4,9 +4,10 @@ from dataclasses import dataclass
 
 @dataclass
 class MetaData:
-    clause_id: str
+    ordinance_id: str
+    ordinance_type: str
+    ordinance_level: str
     scheme_id: str
-    semantic_number: str
     gazettal_date: str
     amendment_number: str
     title: str
@@ -19,11 +20,17 @@ class Chunk:
     metadata: MetaData
 
 
-def batch_chunk(scheme_clauses: list[ClauseDoc]):
-    chunks = []
-    for clause in scheme_clauses:
-        chunks.extend(chunk_clause(clause))
-    return chunks
+def batch_chunk(clause_docs: list[ClauseDoc]):
+    output = []
+    for clause in clause_docs:
+        if clause.content:
+            chunks = chunk_clause(clause)
+            output.extend(chunks)
+            print(
+                f"Clause {clause.title} {clause.ordinance_id} -> {len(chunks)} chunks"
+            )
+
+    return output
 
 
 def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
@@ -56,9 +63,10 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
 
 def build_metadata(cd: ClauseDoc, chunk_index):
     return MetaData(
-        clause_id=cd.clause_id,
+        ordinance_id=cd.ordinance_id,
+        ordinance_type=cd.ordinance_type,
+        ordinance_level=cd.ordinance_level,
         scheme_id=cd.scheme_id,
-        semantic_number=cd.semantic_number,
         gazettal_date=cd.gazettal_date,
         amendment_number=cd.amendment_number,
         title=cd.title,
