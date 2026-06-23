@@ -1,7 +1,7 @@
 # Planning-RAG
 
 RAG app using Victorian planning scheme data. \
-Base API path: <https://api.app.planning.vic.gov.au/planning/v3/schemes/>
+Base API path: <https://api.app.planning.vic.gov.au/planning/v2/schemes/>
 
 ## Pipeline
 
