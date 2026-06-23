@@ -29,7 +29,7 @@ def seed_db():
 
     if write_chunks_to_file:
         # Write chunks to file in case of failure later in the pipeline
-        write_json(chunks, "chunks.json")
+        write_json(chunks, "tests/chunks.json")
 
     print("⌛️ Embedding chunks..")
     embedded_chunks = batch_embed(chunks)
