@@ -39,7 +39,7 @@ def fetch_llm_response(user_query, context, max_attempts=3, client=None):
 
     prompt = f"{system_prompt}\nUser query:{user_query}\nContext: {context}"
 
-    print("📡 Fetching response from llm api..")
+    print("📡 Fetching response from LLM API..")
     for attempt in range(max_attempts):
         try:
             response = client.models.generate_content(

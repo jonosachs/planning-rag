@@ -42,6 +42,7 @@ def run_fetch_scheme_pipeline(
 
     # Trim number nodes to user max if specified
     if key_word:
+        print(f"ℹ️ Filtering results for key word {key_word}")
         clause_nodes_flat = [
             node
             for node in clause_nodes_flat
