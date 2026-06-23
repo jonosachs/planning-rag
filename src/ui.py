@@ -1,6 +1,3 @@
-from pydantic import BaseModel
-
-
 def show_llm_response(response):
     print(f"\nAnswer: {response.answer}\n")
     print("Citations:")

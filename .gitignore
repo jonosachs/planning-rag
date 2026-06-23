@@ -1,7 +1,6 @@
 .env
 .venv
-*.md
+admin/
 __pycache__/
 chroma_db/
-embedded_chunks.txt
-chunks.json
+tests/
