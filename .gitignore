@@ -4,3 +4,4 @@ admin/
 __pycache__/
 chroma_db/
 tests/
+assets/

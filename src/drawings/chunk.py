@@ -1,42 +1,24 @@
-from src.ingest import ClauseDoc
-from dataclasses import dataclass
-
-
-@dataclass
-class MetaData:
-    ordinance_id: str
-    ordinance_type: str
-    ordinance_level: str
-    scheme_id: str
-    gazettal_date: str
-    amendment_number: str
-    title: str
-    chunk_index: int
-
-
-@dataclass
-class Chunk:
-    text: str
-    metadata: MetaData
+from src.planning.schemas import ClauseDoc, ClauseMetaData
+from src.indexing.schemas import Chunk
 
 
 def batch_chunk(clause_docs: list[ClauseDoc]):
     output = []
     for clause in clause_docs:
-        if clause.content:
-            chunks = chunk_clause(clause)
+        chunks = chunk_clause(clause)
+        if chunks:
             output.extend(chunks)
-            print(
-                f"Clause {clause.title} {clause.ordinance_id} -> {len(chunks)} chunks"
-            )
-
     return output
 
 
-def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
+def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk] | None:
+    if not clause.content:
+        return None
+
     chunks = []
     chunk_index = 0
     text = ""
+
     paragraphs = clause.content.split("\n")
 
     for p in paragraphs:
@@ -61,8 +43,8 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
     return chunks
 
 
-def build_metadata(cd: ClauseDoc, chunk_index):
-    return MetaData(
+def build_metadata(cd: ClauseDoc, chunk_index) -> dict:
+    return ClauseMetaData(
         ordinance_id=cd.ordinance_id,
         ordinance_type=cd.ordinance_type,
         ordinance_level=cd.ordinance_level,

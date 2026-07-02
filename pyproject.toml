@@ -1,0 +1,16 @@
+[project]
+  name = "planning-rag"
+  version = "0.1.0"
+  requires-python = ">=3.14"
+  dependencies = [
+    "httpx",
+    "beautifulsoup4",
+    "google-genai",
+    "python-dotenv",
+    "chromadb",
+    "pydantic",
+    "pymupdf",
+  ]
+
+  [tool.pytest.ini_options]
+  pythonpath = ["."]

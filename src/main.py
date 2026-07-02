@@ -1,61 +1,56 @@
-from src.llm import fetch_llm_response
-from src.chunk import batch_chunk
-from src.embed import batch_embed, embed_text
-from src.ui import get_user_query, show_llm_response
-from src.vector_db import (
-    delete_db_collection_if_exists,
-    get_records_from_db,
-    write_to_db,
-    query_db,
-)
-from src.ingest import run_fetch_scheme_pipeline
-from src.io import write_json
-
-scheme_title = "Port Phillip"
-key_word = "shadow"
-db_name = "planning_scheme"
-delete_existing_db = False
-write_chunks_to_file = True
+from src.query.schemas import LlmPlanningResponse
+from src.query.prompt import package_prompt
+from src.query.cli import Cli
+from src.planning.service import PlanningSource
+from src.indexing.interfaces import DataSource, Embedder, VectorStore
+from src.indexing.gemini_embedder import GeminiEmbedder
+from src.indexing.chromadb import ChromaDb
+from src.drawings.service import DrawingsSource
+from src.indexing.pipeline import run_indexing_pipeline
+from src.llm.gemini_llm import GeminiLlm
+from dataclasses import dataclass
 
 
-def seed_db():
-    print("⌛️ Getting scheme data..")
-    scheme_clauses = run_fetch_scheme_pipeline(
-        scheme_title, key_word=key_word, max_results=100
-    )
-
-    print("⌛️ Chunking..")
-    chunks = batch_chunk(scheme_clauses)
-
-    if write_chunks_to_file:
-        # Write chunks to file in case of failure later in the pipeline
-        write_json(chunks, "tests/chunks.json")
-
-    print("⌛️ Embedding chunks..")
-    embedded_chunks = batch_embed(chunks)
-
-    if delete_existing_db:
-        print(f"⌛️ Deleting db {db_name}..")
-        delete_db_collection_if_exists(db_name)
-
-    print(f"⌛️ Writing to db {db_name}..")
-    write_to_db(db_name, embedded_chunks)
-
-    db_record_ids = get_records_from_db(db_name)
-    n = len(db_record_ids)
-    print(f"✅ DB seeded with {n} chunks..")
+@dataclass
+class IndexConfig:
+    source: DataSource
+    embedder: Embedder
+    store: VectorStore
 
 
-def run(query: str | None = None, num_results: int = 5):
-    if not query:
-        query = get_user_query()
+def run_indexing():
+    jobs = [
+        IndexConfig(
+            source=PlanningSource(planning_scheme="Port Phillip"),
+            embedder=GeminiEmbedder(),
+            store=ChromaDb(collection_name="planning"),
+        ),
+        IndexConfig(
+            source=DrawingsSource(pdf_path="assets/plans.pdf"),
+            embedder=GeminiEmbedder(),
+            store=ChromaDb(collection_name="planning"),
+        ),
+    ]
+    for job in jobs:
+        run_indexing_pipeline(job.source, job.embedder, job.store)
 
-    embedded_query = embed_text(query)
-    context = query_db(db_name, embedded_query, num_results)
-    response = fetch_llm_response(query, context)
 
-    show_llm_response(response)
+def run_query():
+    llm = GeminiLlm(schema=LlmPlanningResponse)
+    embedder = GeminiEmbedder()
+    store = ChromaDb(collection_name="planning")
+
+    run_indexing()
+
+    ui = Cli()
+    query = ui.get_user_query()
+    embedded_query = embedder.embed_text(query)
+    query_context = store.run_query(embedded_query)
+    prompt = package_prompt(query, query_context)
+
+    response = llm.get_response(prompt)
+    ui.show_cited_response(response)
 
 
-if __name__ == ("__main__"):
-    run()
+if __name__ == "__main__":
+    run_query()
