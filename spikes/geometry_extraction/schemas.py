@@ -68,6 +68,19 @@ class DimensionCandidate(BaseModel):
     line: tuple[float, float, float, float] | None = None  # dim-line seg in page pt
 
 
+class FeatureVerification(BaseModel):
+    """Result of one focused verification: general, query-agnostic.
+
+    The QUESTION is supplied per task (query-derived); this shape is reused for
+    any 'look at this one marked feature and judge it' check.
+    """
+
+    finding: str  # the model's answer to the focused question
+    holds: bool  # true if the asserted condition holds
+    confidence: str  # "high" | "medium" | "low"
+    reasoning: str
+
+
 class ElementClassification(BaseModel):
     measures_to: str  # proposed dwelling wall / existing wall / fence / setout / other
     is_proposed_dwelling: bool
