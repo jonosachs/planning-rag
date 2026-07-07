@@ -16,6 +16,7 @@ from spikes.geometry_extraction.schemas import (
     DimensionCandidate,
     DimensionSelection,
     RegionChoice,
+    SetbackAssessment,
     SheetTitles,
 )
 
@@ -61,6 +62,44 @@ a label. Also list the features you expect to find there.
 
 Question: {question}
 """
+
+
+SETBACK_PROMPT = """You are assessing setbacks on a proposed site plan.
+
+Use the IMAGE to judge, for each boundary edge (top, bottom, left, right of the
+plan), whether any part of the building sits directly ON that boundary (a zero
+setback) or is offset from it. Note the compass direction if a north point is
+visible.
+
+Use the CANDIDATE dimensions for values - do NOT read numbers off the image and
+do NOT invent any. When a boundary has a dimensioned setback, attach the
+matching candidate(s) and echo their annotated_value into dimensioned_setbacks_mm.
+
+For each boundary set governing_setback_mm = 0 if the building is on it,
+otherwise the minimum of its dimensioned setbacks. Explain the reasoning.
+
+Candidates:
+{candidates}
+"""
+
+
+def assess_setbacks(
+    image_path: str,
+    candidates: list[DimensionCandidate],
+) -> SetbackAssessment:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    candidate_json = "\n".join(c.model_dump_json() for c in candidates)
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, SETBACK_PROMPT.format(candidates=candidate_json)],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": SetbackAssessment.model_json_schema(),
+        },
+    )
+    return SetbackAssessment.model_validate_json(response.text)
 
 
 def list_titles(image_path: str) -> list[str]:

@@ -77,6 +77,20 @@ class DimensionSelection(BaseModel):
     reason: str
 
 
+class BoundarySetback(BaseModel):
+    side: str  # "top" | "bottom" | "left" | "right" (page-relative)
+    compass: str | None  # e.g. "north", if a north point is visible
+    building_on_boundary: bool  # any part of the building sits on this boundary
+    governing_setback_mm: int  # 0 if on boundary, else the minimum dimensioned setback
+    dimensioned_setbacks_mm: list[int]  # echoed from candidate annotated_values
+    candidate_ids: list[str]
+    reasoning: str
+
+
+class SetbackAssessment(BaseModel):
+    boundaries: list[BoundarySetback]
+
+
 class SheetTitles(BaseModel):
     """Sub-drawing titles the model reads off the sheet (verbatim as printed)."""
 
