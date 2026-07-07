@@ -47,3 +47,46 @@ class PageGeometry(BaseModel):
     segments: list[Segment]
     text_tokens: list[TextToken]
     scale_labels: list[str]  # e.g. ["1:100", "1:50"] as found in sheet text
+
+
+class DimensionCandidate(BaseModel):
+    """A dimension reduced to geometry facts - no interpretation of meaning.
+
+    Values here are code-measured/extracted, never read by the model. The model
+    consumes these to *select* which candidate answers a question.
+    """
+
+    id: str
+    annotated_value: int  # the number printed on the sheet (code-extracted)
+    measured_mm: int  # geometric span * scale (code-measured)
+    orientation: str  # "horizontal" | "vertical"
+    x: float  # page-fraction position of the label
+    y: float
+    end_a_to_boundary_pt: float  # nearest title-boundary distance, each end
+    end_b_to_boundary_pt: float
+    nearby_labels: list[str]  # non-numeric text tokens near the dimension
+
+
+class DimensionSelection(BaseModel):
+    """The model's answer: which candidate, and why. It echoes the code value,
+    it does not compute or read one."""
+
+    answer_candidate_id: str | None
+    value_mm: int | None
+    classification: str  # e.g. "front_setback", "running_dimension", "internal"
+    reason: str
+
+
+class RegionChoice(BaseModel):
+    """Where the model says to zoom in for a given question.
+
+    bbox is in page fractions (0-1) so it's independent of render resolution;
+    the model only localises, it never reads values.
+    """
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    reason: str
+    expected_features: list[str]
