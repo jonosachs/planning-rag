@@ -11,10 +11,13 @@ from collections import defaultdict
 
 import fitz
 
+from spikes.geometry_extraction.schemas import LabelledViewport
+
 MIN_PATHS = 10  # ignore clip rects with too few paths to be a real drawing
 MIN_AREA_FRAC = 0.02
 MAX_AREA_FRAC = 0.97  # drop the full-page frame
 MERGE_TOL_PT = 8.0
+TITLE_GAP_PT = 150.0  # a drawing's title sits within this far below its viewport
 
 
 def extract_viewports(page: fitz.Page) -> list[fitz.Rect]:
@@ -60,6 +63,43 @@ def merge_similar(rects: list[tuple[fitz.Rect, int]]) -> list[fitz.Rect]:
             continue
         merged.append(rect)
     return merged
+
+
+def locate_titles(page: fitz.Page, titles: list[str]) -> list[tuple[str, float, float]]:
+    """Find each model-read title in the PDF text: (title, x_center, top_y)."""
+    located = []
+    for title in titles:
+        for box in page.search_for(title):
+            located.append((title, (box.x0 + box.x1) / 2, box.y0))
+    return located
+
+
+def label_viewports(
+    viewports: list[fitz.Rect],
+    located_titles: list[tuple[str, float, float]],
+) -> list[LabelledViewport]:
+    """Attach to each viewport the title sitting directly beneath it."""
+    labelled = []
+    for rect in viewports:
+        title = title_beneath(rect, located_titles)
+        labelled.append(
+            LabelledViewport(x0=rect.x0, y0=rect.y0, x1=rect.x1, y1=rect.y1, title=title)
+        )
+    return labelled
+
+
+def title_beneath(
+    rect: fitz.Rect,
+    located_titles: list[tuple[str, float, float]],
+) -> str | None:
+    below = [
+        (title, top_y)
+        for title, x_center, top_y in located_titles
+        if rect.x0 <= x_center <= rect.x1 and 0 <= top_y - rect.y1 < TITLE_GAP_PT
+    ]
+    if not below:
+        return None
+    return min(below, key=lambda t: t[1])[0]
 
 
 def _similar(a: fitz.Rect, b: fitz.Rect) -> bool:

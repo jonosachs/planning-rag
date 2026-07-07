@@ -16,11 +16,16 @@ from spikes.geometry_extraction.schemas import (
     DimensionCandidate,
     DimensionSelection,
     RegionChoice,
+    SheetTitles,
 )
 
 load_dotenv()
 
 MODEL = "gemini-3-flash-preview"
+
+TITLES_PROMPT = """List the title of every separate sub-drawing on this sheet,
+exactly as printed (e.g. 'PROPOSED SITE PLAN'). Titles only - not scales, notes,
+or the title block. Do not read dimensions."""
 
 SELECT_PROMPT = """You are selecting which dimension answers a planning question
 from a list of candidates already extracted and measured from the drawing.
@@ -56,6 +61,21 @@ a label. Also list the features you expect to find there.
 
 Question: {question}
 """
+
+
+def list_titles(image_path: str) -> list[str]:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, TITLES_PROMPT],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": SheetTitles.model_json_schema(),
+        },
+    )
+    return SheetTitles.model_validate_json(response.text).titles
 
 
 def render_sheet(page: fitz.Page, out_path: str, max_width: int = 2000) -> str:

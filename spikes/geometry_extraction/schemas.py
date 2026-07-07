@@ -77,6 +77,20 @@ class DimensionSelection(BaseModel):
     reason: str
 
 
+class SheetTitles(BaseModel):
+    """Sub-drawing titles the model reads off the sheet (verbatim as printed)."""
+
+    titles: list[str]
+
+
+class LabelledViewport(BaseModel):
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    title: str | None  # the sub-drawing title sitting directly beneath it
+
+
 class RegionChoice(BaseModel):
     """Where the model says to zoom in for a given question.
 
