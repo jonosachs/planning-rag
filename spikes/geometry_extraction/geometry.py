@@ -25,6 +25,17 @@ def extract_page_geometry(page: fitz.Page) -> PageGeometry:
     )
 
 
+def clip_geometry(geo: PageGeometry, rect: fitz.Rect) -> PageGeometry:
+    """Restrict a page's geometry to one viewport rectangle."""
+    return geo.model_copy(update={
+        "segments": [
+            s for s in geo.segments
+            if rect.contains(fitz.Point((s.p0[0] + s.p1[0]) / 2, (s.p0[1] + s.p1[1]) / 2))
+        ],
+        "text_tokens": [t for t in geo.text_tokens if rect.contains(fitz.Point(t.center))],
+    })
+
+
 def extract_segments(page: fitz.Page) -> list[Segment]:
     segments = []
     for drawing in page.get_drawings():
