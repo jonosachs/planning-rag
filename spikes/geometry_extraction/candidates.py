@@ -60,6 +60,7 @@ def build_dimension_candidates(
                     lbl.text for lbl in labels
                     if math.dist(lbl.center, tok.center) < LABEL_RADIUS_PT
                 ][:6],
+                line=(near.p0[0], near.p0[1], near.p1[0], near.p1[1]),
             )
         )
     return candidates

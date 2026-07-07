@@ -1,11 +1,12 @@
-"""Slice 7: per-boundary setback assessment (condition + dimensions).
+"""Slice 7: per-boundary setback assessment with dwelling/existing filtering.
 
 Isolate the site-plan viewport, build single-scale dimension candidates, then a
-single vision call judges each boundary's on/offset condition from the image
-while taking values only from the candidates. Governing setback per boundary =
-0 if on boundary, else the minimum dimensioned setback. This fixes the original
-bug where one dimensioned recess (2825) was reported as "the" setback while the
-building is actually on the north boundary (0).
+single vision call judges each boundary's on/offset condition from the image and
+classifies every attached dimension (what it measures to + status). Code then
+computes the governing setback deterministically = 0 if the dwelling is on the
+boundary, else the minimum of dimensions that measure boundary -> proposed
+dwelling. A dimension to an existing wall/fence/setout is excluded, so the right
+boundary resolves to 10800 (house), not 9100 (existing boundary wall).
 
 Run from repo root:
     .venv/bin/python -m spikes.geometry_extraction.run_slice7
@@ -15,6 +16,7 @@ import fitz
 
 from spikes.geometry_extraction.candidates import build_dimension_candidates
 from spikes.geometry_extraction.geometry import clip_geometry, extract_page_geometry
+from spikes.geometry_extraction.schemas import BoundarySetback
 from spikes.geometry_extraction.viewports import (
     extract_viewports,
     label_viewports,
@@ -40,22 +42,29 @@ def main() -> None:
     site_geo = clip_geometry(geo, rect)
     boundary = [s for s in site_geo.segments if s.is_dashed and s.length > 100]
     candidates = build_dimension_candidates(site_geo, SCALE, boundary)
+    known = {c.annotated_value for c in candidates}
 
-    # high-res crop of just the site plan for the visual condition judgement
     pix = page.get_pixmap(matrix=fitz.Matrix(4, 4), clip=pad(rect, page), alpha=False)
     pix.save(CROP_PATH)
 
     assessment = assess_setbacks(CROP_PATH, candidates)
-    known = {c.annotated_value for c in candidates}
-
     print(f"{len(candidates)} candidates; per-boundary setbacks:\n")
     for b in assessment.boundaries:
-        invented = [v for v in b.dimensioned_setbacks_mm if v not in known]
-        flag = f"  [!] invented values not in candidates: {invented}" if invented else ""
-        on = "ON BOUNDARY" if b.building_on_boundary else "offset"
-        print(f"  {b.side:<7} ({b.compass or '?'}): {on}  governing={b.governing_setback_mm}mm  "
-              f"dimensioned={b.dimensioned_setbacks_mm}{flag}")
-        print(f"          {b.reasoning[:100]}")
+        gov = governing_setback(b)
+        gov_str = "0mm (on boundary)" if gov == 0 else (f"{gov}mm" if gov else "undimensioned")
+        print(f"  {b.side:<7} ({b.compass or '?'}): governing = {gov_str}")
+        for d in b.dimensions:
+            mark = "setback" if d.counts_as_setback else "excluded"
+            flag = "  [!] not a candidate value" if d.value_mm not in known else ""
+            print(f"        {d.value_mm:>6}mm  {mark:<8} -> {d.measures_to} ({d.status}){flag}")
+        print()
+
+
+def governing_setback(b: BoundarySetback) -> int | None:
+    if b.building_on_boundary:
+        return 0
+    setbacks = [d.value_mm for d in b.dimensions if d.counts_as_setback]
+    return min(setbacks) if setbacks else None
 
 
 def isolate_site_plan(page: fitz.Page) -> fitz.Rect | None:

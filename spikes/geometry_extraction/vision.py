@@ -15,6 +15,7 @@ from google.genai import types
 from spikes.geometry_extraction.schemas import (
     DimensionCandidate,
     DimensionSelection,
+    ElementClassification,
     RegionChoice,
     SetbackAssessment,
     SheetTitles,
@@ -67,16 +68,22 @@ Question: {question}
 SETBACK_PROMPT = """You are assessing setbacks on a proposed site plan.
 
 Use the IMAGE to judge, for each boundary edge (top, bottom, left, right of the
-plan), whether any part of the building sits directly ON that boundary (a zero
-setback) or is offset from it. Note the compass direction if a north point is
-visible.
+plan), whether any part of the PROPOSED DWELLING sits directly ON that boundary
+(a zero setback) or is offset from it. Note the compass direction if a north
+point is visible.
 
 Use the CANDIDATE dimensions for values - do NOT read numbers off the image and
-do NOT invent any. When a boundary has a dimensioned setback, attach the
-matching candidate(s) and echo their annotated_value into dimensioned_setbacks_mm.
+do NOT invent any. Attach every candidate that dimensions a distance to this
+boundary and, for each, classify from the image:
+- measures_to: what the far end reaches (proposed dwelling wall / existing
+  boundary wall / fence / setout point / other)
+- status: proposed, existing, retained, or unknown
+- counts_as_setback: true ONLY when it measures boundary -> proposed dwelling
+  wall. A dimension to an existing wall, fence, or setout point is NOT the
+  dwelling setback.
 
-For each boundary set governing_setback_mm = 0 if the building is on it,
-otherwise the minimum of its dimensioned setbacks. Explain the reasoning.
+Do not compute a governing value; code does that from counts_as_setback.
+Explain the reasoning.
 
 Candidates:
 {candidates}
@@ -100,6 +107,34 @@ def assess_setbacks(
         },
     )
     return SetbackAssessment.model_validate_json(response.text)
+
+
+ELEMENT_PROMPT = """The dimension outlined in RED on this crop measures a
+distance of {value} mm. Look closely at what each end of it reaches.
+
+Classify what it measures TO at the end away from the title boundary:
+- proposed dwelling wall (the new house)
+- existing wall / structure (e.g. an existing boundary wall, not the house)
+- fence, setout point, or other
+
+Set is_proposed_dwelling true only if the far end is the proposed house wall.
+Give a confidence (high/medium/low) and explain what you see. Do not report any
+other numbers."""
+
+
+def classify_element(image_path: str, value_mm: int) -> ElementClassification:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, ELEMENT_PROMPT.format(value=value_mm)],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": ElementClassification.model_json_schema(),
+        },
+    )
+    return ElementClassification.model_validate_json(response.text)
 
 
 def list_titles(image_path: str) -> list[str]:

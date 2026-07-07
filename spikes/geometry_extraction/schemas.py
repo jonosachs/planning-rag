@@ -65,6 +65,14 @@ class DimensionCandidate(BaseModel):
     end_a_to_boundary_pt: float  # nearest title-boundary distance, each end
     end_b_to_boundary_pt: float
     nearby_labels: list[str]  # non-numeric text tokens near the dimension
+    line: tuple[float, float, float, float] | None = None  # dim-line seg in page pt
+
+
+class ElementClassification(BaseModel):
+    measures_to: str  # proposed dwelling wall / existing wall / fence / setout / other
+    is_proposed_dwelling: bool
+    confidence: str  # "high" | "medium" | "low"
+    reasoning: str
 
 
 class DimensionSelection(BaseModel):
@@ -77,13 +85,19 @@ class DimensionSelection(BaseModel):
     reason: str
 
 
+class AttachedDimension(BaseModel):
+    candidate_id: str
+    value_mm: int  # echoed from the candidate, never invented
+    measures_to: str  # e.g. "proposed dwelling wall", "existing boundary wall", "fence", "setout point"
+    status: str  # "proposed" | "existing" | "retained" | "unknown"
+    counts_as_setback: bool  # true only when boundary -> proposed dwelling wall
+
+
 class BoundarySetback(BaseModel):
     side: str  # "top" | "bottom" | "left" | "right" (page-relative)
     compass: str | None  # e.g. "north", if a north point is visible
-    building_on_boundary: bool  # any part of the building sits on this boundary
-    governing_setback_mm: int  # 0 if on boundary, else the minimum dimensioned setback
-    dimensioned_setbacks_mm: list[int]  # echoed from candidate annotated_values
-    candidate_ids: list[str]
+    building_on_boundary: bool  # any part of the proposed dwelling sits on this boundary
+    dimensions: list[AttachedDimension]
     reasoning: str
 
 
