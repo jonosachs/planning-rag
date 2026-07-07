@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
+from google.genai import types
 import time
 from google.genai.client import Client
 from pydantic import BaseModel
@@ -33,12 +34,12 @@ class GeminiLlm:
         self._client = genai.Client(api_key=api_key)
         self._model = "gemini-3-flash-preview"
 
-    def get_response(self, prompt):
+    def get_response(self, prompt, image_paths: list[str] | None = None):
         for attempt in range(self._max_retries):
             try:
                 response = self._client.models.generate_content(
                     model=self._model,
-                    contents=prompt,
+                    contents=build_content_parts(prompt, image_paths or []),
                     config={
                         "response_mime_type": "application/json",
                         "response_json_schema": self._schema.model_json_schema(),
@@ -56,3 +57,22 @@ class GeminiLlm:
                 raise RuntimeError("⚠️ Unexpected error") from e
 
         raise RuntimeError("⚠️ Could not resolve API error")
+
+
+def build_content_parts(prompt: str, image_paths: list[str]):
+    parts = [types.Part.from_text(text=prompt)]
+
+    for image_path in image_paths:
+        if not os.path.exists(image_path):
+            print(f"⚠️ Drawing image not found, skipping: {image_path}")
+            continue
+
+        with open(image_path, "rb") as image_file:
+            parts.append(
+                types.Part.from_bytes(
+                    data=image_file.read(),
+                    mime_type="image/png",
+                )
+            )
+
+    return parts

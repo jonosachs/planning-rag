@@ -1,6 +1,21 @@
+from src.planning.clean import (
+    build_clause_docs,
+    build_clause_refs,
+    convert_html_to_text,
+)
+from src.planning.ingest import (
+    fetch_clause_payloads,
+    fetch_scheme_payload,
+    fetch_schemes_index,
+    find_scheme_id_by_title,
+    flatten_clause_nodes,
+)
+from src.planning.schemas import ClauseDoc
+
+
 def ingest_planning_data(
     scheme: str, key_word: str | None = None, max_results: int | None = None
-) -> list[ClauseDoc]:
+) -> tuple[str, list[dict]]:
     # Get index of all scheme ids
     schemes = fetch_schemes_index()
     # Find the scheme id matching the user's target title
@@ -25,10 +40,10 @@ def ingest_planning_data(
         clause_nodes = clause_nodes[:max_results]
         print(f"✂️ Trimmed to {len(clause_nodes)} results")
 
-    return clause_nodes
+    return scheme_id, clause_nodes
 
 
-def clean(clause_nodes):
+def clean(scheme_id: str, clause_nodes: list[dict]) -> list[ClauseDoc]:
     # Convert clause references into ClauseRef objects
     clause_refs = build_clause_refs(scheme_id, clause_nodes)
     # Fetch the clause data
@@ -44,6 +59,14 @@ def clean(clause_nodes):
     return clause_docs
 
 
-def run_pipeline():
-    ingest_planning_data()
-    clean()
+def run_fetch_scheme_pipeline(
+    scheme: str,
+    key_word: str | None = None,
+    max_results: int | None = None,
+) -> list[ClauseDoc]:
+    scheme_id, clause_nodes = ingest_planning_data(
+        scheme=scheme,
+        key_word=key_word,
+        max_results=max_results,
+    )
+    return clean(scheme_id, clause_nodes)

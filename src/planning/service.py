@@ -1,5 +1,6 @@
 from src.indexing.interfaces import DataSource
 from src.planning.chunk import batch_chunk
+from src.planning.pipeline import run_fetch_scheme_pipeline
 
 
 class PlanningSource(DataSource):

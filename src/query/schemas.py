@@ -22,6 +22,25 @@ class LlmPlanningResponse(BaseModel):
     )
 
 
+class DrawingCitation(BaseModel):
+    page: int
+    chunk_index: int
+    feature_type: str
+    source_text: str
+
+
+class LlmComplianceResponse(BaseModel):
+    answer: str = Field(
+        description="""
+        Answer the user's planning compliance question using both the planning scheme
+        context and the drawing context. If the available context is insufficient,
+        say what cannot be determined.
+        """
+    )
+    planning_citations: list[PlanningCitation] = Field(default_factory=list)
+    drawing_citations: list[DrawingCitation] = Field(default_factory=list)
+
+
 class ExtractedDwgField(BaseModel):
     value: float | str | None
     unit: str | None

@@ -15,12 +15,13 @@ class ChromaDb(VectorStore):
         except Exception as e:
             raise RuntimeError(f"⚠️ Failed to delete db {self.collection}: {e}") from e
 
-    def write(self, embedded_chunks: list[EmbeddedChunk], collection_name):
+    def write(self, embedded_chunks: list[EmbeddedChunk], collection_name=None):
+        collection_name = collection_name or self.collection
         collection = self.client.get_or_create_collection(name=collection_name)
         for chunk in embedded_chunks:
             try:
                 collection.upsert(
-                    ids=[uuid.uuid4()],
+                    ids=[build_chunk_id(chunk)],
                     documents=[chunk.text],
                     embeddings=[chunk.embedded_text],
                     metadatas=[chunk.metadata],
@@ -36,7 +37,34 @@ class ChromaDb(VectorStore):
         )
         return results
 
-    def get_all(self, collection_name) -> dict:
+    def get_all(self, collection_name=None) -> dict:
+        collection_name = collection_name or self.collection
         collection = self.client.get_or_create_collection(name=collection_name)
         records = collection.get(include=["documents", "metadatas"])
         return records
+
+
+def build_chunk_id(chunk: EmbeddedChunk) -> str:
+    metadata = chunk.metadata
+
+    if metadata.get("source") == "drawings":
+        return ":".join(
+            [
+                "drawings",
+                str(metadata.get("page")),
+                str(metadata.get("chunk_kind")),
+                str(metadata.get("chunk_index")),
+            ]
+        )
+
+    if metadata.get("ordinance_id"):
+        return ":".join(
+            [
+                "planning",
+                str(metadata.get("scheme_id")),
+                str(metadata.get("ordinance_id")),
+                str(metadata.get("chunk_index")),
+            ]
+        )
+
+    return str(uuid.uuid4())

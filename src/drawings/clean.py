@@ -19,6 +19,24 @@ PLANNING_KEYWORDS = [
     "boundary",
     "easement",
     "secluded private open space",
+    "edge of existing wall",
+    "existing wall",
+    "existing parapet",
+    "existing chimney",
+    "retained",
+    "no works",
+    "proposed fixed awning",
+    "subfloor vent",
+    "vent chimneys",
+    "chimney",
+    "solatube",
+    "roof fixture",
+    "roofed awning",
+    "gutter",
+    "downpipe",
+    "new gutter",
+    "new gut",
+    "new dp",
 ]
 
 
@@ -44,7 +62,7 @@ def is_planning_relevant(text, keywords) -> bool:
     return any(word in text for word in keywords)
 
 
-def render(page, output_path, max_width=1600) -> str:
+def render(page, output_path, max_width=3200) -> str:
     zoom = max_width / page.rect.width
     matrix = fitz.Matrix(zoom, zoom)
     pix = page.get_pixmap(matrix=matrix, alpha=False)

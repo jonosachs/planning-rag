@@ -8,9 +8,22 @@ class Cli(UserInterface):
 
     def show_cited_response(self, response: LlmPlanningResponse):
         print(f"\nAnswer: {response.answer}\n")
-        print("Citations:")
 
-        for count, citation in enumerate(response.citations):
+        if hasattr(response, "planning_citations"):
+            self._print_citations("Planning citations", response.planning_citations)
+            self._print_citations("Drawing citations", response.drawing_citations)
+            return
+
+        self._print_citations("Citations", response.citations or [])
+
+    def _print_citations(self, heading, citations):
+        print(f"{heading}:")
+
+        if not citations:
+            print("None")
+            return
+
+        for count, citation in enumerate(citations):
             citation_text = [
                 f"{key}: {value}" for key, value in citation.model_dump().items()
             ]

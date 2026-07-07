@@ -1,5 +1,5 @@
-from src.planning.schemas import ClauseChunk, ClauseDoc, ClauseMetaData
-from src.rag.schemas import Chunk
+from src.indexing.schemas import Chunk
+from src.planning.schemas import ClauseDoc, ClauseMetaData
 
 
 def batch_chunk(clause_docs: list[ClauseDoc]):
@@ -15,7 +15,7 @@ def batch_chunk(clause_docs: list[ClauseDoc]):
     return output
 
 
-def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[ClauseChunk]:
+def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
     chunks = []
     chunk_index = 0
     text = ""
@@ -53,4 +53,4 @@ def build_metadata(cd: ClauseDoc, chunk_index):
         amendment_number=cd.amendment_number,
         title=cd.title,
         chunk_index=chunk_index,
-    )
+    ).model_dump()

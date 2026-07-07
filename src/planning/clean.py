@@ -39,8 +39,8 @@ def build_clause_refs(scheme_id: str, clause_nodes: list[dict]) -> list[ClauseRe
 
 def parse_as_clause_ref(data, scheme_id) -> ClauseRef:
     clause_ref = ClauseRef(
-        data["ordinanceID"],
-        data["title"],
+        ordinance_id=data["ordinanceID"],
+        title=data["title"],
         scheme_id=scheme_id,
     )
     return clause_ref
