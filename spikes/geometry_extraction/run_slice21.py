@@ -281,27 +281,19 @@ def format_certified(certified: list[CertifiedOffset]) -> str:
     )
 
 
+def label_says_existing(offset: OffsetDim) -> bool:
+    """Status from the PRINTED label text (deterministic), not the model's inferred
+    status field (which flips run-to-run for unmarked dims like 'nom 10800')."""
+    return "existing" in offset.printed_label.lower()
+
+
 def governing_offset(certified: list[CertifiedOffset]) -> tuple[int | None, str]:
-    proposed_or_retained = [
-        c.offset.value_mm
-        for c in certified
-        if c.offset.status.lower() in {"proposed", "retained"}
-    ]
-    if proposed_or_retained:
-        return min(proposed_or_retained), "proposed/retained preferred"
-
-    existing = [
-        c.offset.value_mm
-        for c in certified
-        if c.offset.status.lower() == "existing"
-    ]
-    if existing:
-        return min(existing), "existing only"
-
-    unknown = [c.offset.value_mm for c in certified]
-    if unknown:
-        return min(unknown), "unknown status"
-    return None, "no certified offsets"
+    # Exclude offsets whose label says "existing" (likely existing fabric / boundary
+    # wall). Proposed or unmarked labels are candidate proposed setbacks; min governs.
+    candidates = [c.offset.value_mm for c in certified if not label_says_existing(c.offset)]
+    if candidates:
+        return min(candidates), "min of non-existing offsets"
+    return None, "only 'existing' offsets (excluded)"
 
 
 def format_dropped(dropped: list[tuple[OffsetDim, str]]) -> str:
