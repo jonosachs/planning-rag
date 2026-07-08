@@ -10,6 +10,8 @@
     "chromadb",
     "pydantic",
     "pymupdf",
+    "pillow",
+    "numpy",
   ]
 
   [tool.pytest.ini_options]
