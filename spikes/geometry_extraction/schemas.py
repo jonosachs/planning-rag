@@ -83,6 +83,22 @@ class SiteRegions(BaseModel):
     boundary_top_line: list[Vertex]  # the boundary edge along the top of the crop
 
 
+class IdentifiedSetback(BaseModel):
+    """A setback the model reads off the plan. value_mm is the model's read and
+    must be confirmed against the real PDF text before it is trusted."""
+
+    role: str  # front | rear | side
+    printed_label: str  # the dimension text as printed, e.g. "nom 4400 (existing) to title"
+    value_mm: int
+    measures_to: str  # what the building end reaches
+    status: str  # existing | proposed | retained | unknown
+    location_hint: str  # e.g. "far left", "bottom right"
+
+
+class SetbackIdentification(BaseModel):
+    setbacks: list[IdentifiedSetback]
+
+
 class BoundaryOutline(BaseModel):
     """The site/title boundary as an ordered polygon (any orientation)."""
 

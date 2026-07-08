@@ -19,6 +19,7 @@ from spikes.geometry_extraction.schemas import (
     ElementClassification,
     RegionChoice,
     SetbackAssessment,
+    SetbackIdentification,
     SheetTitles,
     SiteRegions,
 )
@@ -157,6 +158,34 @@ outline) on this site plan as an ordered list of polygon vertices, in
 page-fraction coordinates where x is 0 at the left and 1 at the right, y is 0 at
 the top and 1 at the bottom of the image. Follow the actual boundary line all the
 way around. Do not report any dimension numbers."""
+
+
+IDENTIFY_SETBACKS_PROMPT = """This is a proposed site plan. Identify the building
+SETBACK dimensions - distances measured from a property/title boundary to a
+building wall. For each setback give: role (front/rear/side), printed_label (the
+dimension text exactly as printed, e.g. "nom 4400 (existing) to title"),
+value_mm, measures_to (what the building end reaches, e.g. existing building
+wall / proposed addition wall), status (existing/proposed/retained/unknown), and
+location_hint (e.g. far left, bottom right).
+
+Only boundary-to-building setbacks. Exclude internal room dimensions, courtyard
+widths, and overall site/running dimensions."""
+
+
+def identify_setbacks(image_path: str, temperature: float = 0.0) -> SetbackIdentification:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, IDENTIFY_SETBACKS_PROMPT],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": SetbackIdentification.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return SetbackIdentification.model_validate_json(response.text)
 
 
 def extract_boundary_polygon(image_path: str, temperature: float = 0.0) -> BoundaryOutline:
