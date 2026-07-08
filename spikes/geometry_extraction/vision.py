@@ -15,6 +15,7 @@ from google.genai import types
 from spikes.geometry_extraction.schemas import (
     BoundaryOutline,
     BoundaryReport,
+    BoundarySide,
     DimensionCandidate,
     DimensionSelection,
     ElementClassification,
@@ -113,20 +114,22 @@ def assess_setbacks(
     return SetbackAssessment.model_validate_json(response.text)
 
 
-ELEMENT_PROMPT = """The dimension outlined in RED on this crop measures a
-distance of {value} mm. Look closely at what each end of it reaches.
+ELEMENT_PROMPT = """The dimension outlined in RED measures {value} mm. Look at
+what its far end (away from the title boundary) reaches.
 
-Classify what it measures TO at the end away from the title boundary:
-- proposed dwelling wall (the new house)
-- existing wall / structure (e.g. an existing boundary wall, not the house)
-- fence, setout point, or other
+Set is_building_wall true ONLY if that far end lands directly on a wall of the
+MAIN DWELLING/house that exists in the final scheme (proposed OR
+retained-existing). Set it false if the end lands on any of: an existing boundary
+wall or fence, a separate existing ancillary structure / outbuilding, a setout
+point, or an INTERMEDIATE point of a running dimension chain (i.e. this dimension
+is only one segment of a chain and does not by itself reach the dwelling).
 
-Set is_proposed_dwelling true only if the far end is the proposed house wall.
-Give a confidence (high/medium/low) and explain what you see. Do not report any
-other numbers."""
+Set is_proposed_dwelling true only for a proposed (new) dwelling wall.
+measures_to: describe what the far end reaches. confidence: high/medium/low.
+Do not report any other numbers."""
 
 
-def classify_element(image_path: str, value_mm: int) -> ElementClassification:
+def classify_element(image_path: str, value_mm: int, temperature: float = 0.0) -> ElementClassification:
     client = genai.Client(api_key=_require_key())
     with open(image_path, "rb") as f:
         image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
@@ -136,6 +139,7 @@ def classify_element(image_path: str, value_mm: int) -> ElementClassification:
         config={
             "response_mime_type": "application/json",
             "response_json_schema": ElementClassification.model_json_schema(),
+            "temperature": temperature,
         },
     )
     return ElementClassification.model_validate_json(response.text)
@@ -219,6 +223,48 @@ def assess_boundaries(image_path: str, temperature: float = 0.0) -> BoundaryRepo
         },
     )
     return BoundaryReport.model_validate_json(response.text)
+
+
+STRIP_PROMPT = """This crop shows the {side} boundary of a site plan: the
+property/title boundary runs along the {side} of the image, with the proposed
+building adjacent to it.
+
+Programmatically extracted candidate dimension values visible in this crop:
+{candidates}
+
+Report for THIS boundary only:
+- side ({side}) and role (front/rear/side)
+- building_on_boundary: does the proposed building sit directly ON this boundary
+  anywhere (zero setback)?
+- offsets: the setback dimensions from THIS boundary to the building, where it is
+  set back. For each: value_mm, printed_label (exactly as printed), x,y
+  (page-fraction position within THIS crop), status (existing/proposed/retained).
+
+Read the printed dimensions - do not invent numbers. If a printed dimension is
+only one segment of a running chain and does not by itself reach the building,
+do not report it as a setback."""
+
+
+def assess_boundary_strip(
+    image_path: str,
+    side: str,
+    candidate_values: list[int] | None = None,
+    temperature: float = 0.0,
+) -> BoundarySide:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    candidates = ", ".join(str(v) for v in sorted(set(candidate_values or []))) or "none"
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, STRIP_PROMPT.format(side=side, candidates=candidates)],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": BoundarySide.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return BoundarySide.model_validate_json(response.text)
 
 
 def extract_boundary_polygon(image_path: str, temperature: float = 0.0) -> BoundaryOutline:

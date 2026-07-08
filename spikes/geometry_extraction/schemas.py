@@ -140,7 +140,8 @@ class FeatureVerification(BaseModel):
 
 class ElementClassification(BaseModel):
     measures_to: str  # proposed dwelling wall / existing wall / fence / setout / other
-    is_proposed_dwelling: bool
+    is_building_wall: bool  # a dwelling wall in the FINAL scheme (proposed OR retained-existing)
+    is_proposed_dwelling: bool  # narrower: a proposed (new) dwelling wall only
     confidence: str  # "high" | "medium" | "low"
     reasoning: str
 
