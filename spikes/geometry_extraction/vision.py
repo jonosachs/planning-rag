@@ -20,6 +20,7 @@ from spikes.geometry_extraction.schemas import (
     DimensionSelection,
     ElementClassification,
     FrontBoundary,
+    LevelIdentification,
     RegionChoice,
     RelevantDrawings,
     SetbackAssessment,
@@ -321,6 +322,36 @@ nature strip, a vehicle crossover or driveway entrance from the street, or a
 Return front_side as one of top/bottom/left/right (which edge of THIS image the
 front boundary runs along), the street_cue you relied on, and confidence
 (high/medium/low). If no street is identifiable, set confidence low."""
+
+
+LEVELS_PROMPT = """This is a building elevation/section. From the reduced-level
+(RL) values extracted from the drawing:
+{rls}
+
+identify (using ONLY values from that list):
+- ridge_rl: the highest roof point RL
+- natural_ground_rl: the NATURAL / existing ground line level (NOT the finished
+  floor level FFL, which sits just above natural ground)
+- top_of_wall_rl: the eaves / parapet / top-of-wall RL
+
+If a value can't be identified, return null for it. Explain briefly."""
+
+
+def identify_levels(image_path: str, rl_values: list[float], temperature: float = 0.0) -> LevelIdentification:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    prompt = LEVELS_PROMPT.format(rls=", ".join(str(v) for v in sorted(set(rl_values))))
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, prompt],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": LevelIdentification.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return LevelIdentification.model_validate_json(response.text)
 
 
 def identify_front_boundary(image_path: str, temperature: float = 0.0) -> FrontBoundary:

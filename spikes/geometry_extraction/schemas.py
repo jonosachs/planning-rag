@@ -189,6 +189,15 @@ class RelevantDrawings(BaseModel):
     reason: str
 
 
+class LevelIdentification(BaseModel):
+    """The model's read of the key RLs on an elevation (values from the pool)."""
+
+    ridge_rl: float | None  # highest roof point
+    natural_ground_rl: float | None  # NATURAL/existing ground - not FFL
+    top_of_wall_rl: float | None  # eaves / parapet / top of wall
+    reasoning: str
+
+
 class FrontBoundary(BaseModel):
     """The street-facing (front) boundary; rear/sides are derived from it."""
 
