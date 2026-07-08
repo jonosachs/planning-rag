@@ -189,6 +189,14 @@ class RelevantDrawings(BaseModel):
     reason: str
 
 
+class FrontBoundary(BaseModel):
+    """The street-facing (front) boundary; rear/sides are derived from it."""
+
+    front_side: str  # top | bottom | left | right
+    street_cue: str  # what indicated the street (road name, footpath, crossover...)
+    confidence: str  # high | medium | low
+
+
 class LabelledViewport(BaseModel):
     x0: float
     y0: float

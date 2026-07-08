@@ -20,7 +20,9 @@ def main() -> None:
 
     print(f"query: {answer.query}")
     print(f"selected drawing: {answer.drawing!r}")
-    print(f"reason: {answer.drawing_reason}\n")
+    print(f"reason: {answer.drawing_reason}")
+    print(f"front boundary: {answer.front_side} "
+          f"(cue: {answer.street_cue}; confidence: {answer.front_confidence})\n")
 
     governing = set()
     for b in answer.boundaries:

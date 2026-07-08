@@ -19,6 +19,7 @@ from spikes.geometry_extraction.schemas import (
     DimensionCandidate,
     DimensionSelection,
     ElementClassification,
+    FrontBoundary,
     RegionChoice,
     RelevantDrawings,
     SetbackAssessment,
@@ -308,6 +309,34 @@ The sheet contains these sub-drawings:
 Which sub-drawing(s) are relevant to answering the question? Return the exact
 title(s) from the list and a brief reason. For setbacks, the proposed site plan
 is usually the relevant drawing."""
+
+
+FRONT_PROMPT = """This is a proposed site plan. Identify the FRONT boundary - the
+property boundary that faces the street / primary road frontage.
+
+Use street cues, NOT compass direction: a road or street name, a footpath or
+nature strip, a vehicle crossover or driveway entrance from the street, or a
+"frontage"/"to title" annotation on that edge.
+
+Return front_side as one of top/bottom/left/right (which edge of THIS image the
+front boundary runs along), the street_cue you relied on, and confidence
+(high/medium/low). If no street is identifiable, set confidence low."""
+
+
+def identify_front_boundary(image_path: str, temperature: float = 0.0) -> FrontBoundary:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, FRONT_PROMPT],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": FrontBoundary.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return FrontBoundary.model_validate_json(response.text)
 
 
 def select_drawings(query: str, titles: list[str], temperature: float = 0.0) -> RelevantDrawings:

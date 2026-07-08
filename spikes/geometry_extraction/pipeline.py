@@ -23,10 +23,13 @@ from spikes.geometry_extraction.viewports import (
 )
 from spikes.geometry_extraction.vision import (
     assess_boundary_strip,
+    identify_front_boundary,
     list_titles,
     render_sheet,
     select_drawings,
 )
+
+OPPOSITE = {"top": "bottom", "bottom": "top", "left": "right", "right": "left"}
 from spikes.geometry_extraction.run_slice21 import (
     MM_PER_PT,
     ON_FRACTION,
@@ -67,6 +70,9 @@ class SetbackAnswer:
     drawing: str | None
     drawing_reason: str
     boundaries: list[BoundarySetback]
+    front_side: str | None = None
+    street_cue: str = ""
+    front_confidence: str = ""
 
 
 def answer_setbacks(pdf_path: str, query: str, page_number: int = 0) -> SetbackAnswer:
@@ -81,17 +87,20 @@ def answer_setbacks(pdf_path: str, query: str, page_number: int = 0) -> SetbackA
     if rect is None:
         return SetbackAnswer(query, None, choice.reason, [])
 
-    boundaries = extract_setbacks(pdf_path, page, page_number, rect)
+    boundaries, front = extract_setbacks(pdf_path, page, page_number, rect)
     drawing = choice.titles[0] if choice.titles else None
-    return SetbackAnswer(query, drawing, choice.reason, boundaries)
+    return SetbackAnswer(query, drawing, choice.reason, boundaries,
+                         front_side=front.front_side, street_cue=front.street_cue,
+                         front_confidence=front.confidence)
 
 
-def extract_setbacks(pdf_path, page, page_number, rect) -> list[BoundarySetback]:
+def extract_setbacks(pdf_path, page, page_number, rect):
     site_geo = clip_geometry(extract_page_geometry(page), rect)
     tokens = [t for t in site_geo.text_tokens if is_dimension_text(t.text)]
 
     wpx, hpx = ensure_envelope(pdf_path, page_number, rect, COLOURED_PATH, INPUT_PATH, ZOOM)
     mask = envelope_mask(COLOURED_PATH, (wpx, hpx))
+    front = identify_front_boundary(INPUT_PATH)  # whole-plan: which edge is the street
     edges = boundary_edges_from_geometry(site_geo, rect)
     pts = [p for edge in edges for p in edge]
     cx, cy = np.mean([p[0] for p in pts]), np.mean([p[1] for p in pts])
@@ -118,7 +127,7 @@ def extract_setbacks(pdf_path, page, page_number, rect) -> list[BoundarySetback]
 
         results.append(BoundarySetback(
             side=side,
-            role=result.role,
+            role=role_for_side(side, front.front_side),
             on_boundary=on,
             governing_mm=0 if on else gov_value,
             governing_reason="on boundary" if on else gov_reason,
@@ -126,7 +135,15 @@ def extract_setbacks(pdf_path, page, page_number, rect) -> list[BoundarySetback]
             ignored=[int(t.text.strip()) for t in ignored],
             model_envelope_disagree=result.building_on_boundary != on,
         ))
-    return results
+    return results, front
+
+
+def role_for_side(side: str, front_side: str) -> str:
+    if side == front_side:
+        return "front"
+    if side == OPPOSITE.get(front_side):
+        return "rear"
+    return "side"
 
 
 def viewport_for(labelled, selected_titles: list[str]) -> fitz.Rect | None:
