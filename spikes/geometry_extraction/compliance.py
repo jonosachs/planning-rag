@@ -43,6 +43,13 @@ code-computed required setback (from wall height and natural ground). Use the
 overall height for any max-height control, and use the code-computed required
 side/rear setbacks and their verdict (complies / does not comply / marginal).
 
+Assessment rules:
+- A setback marked EXISTING is existing/retained fabric, NOT proposed works.
+  Note it but do NOT assess its compliance - it is not part of this application.
+- Where the building sits ON a boundary, the setback is nil (0). Any "recessed
+  at" values are where it steps FURTHER back and are NOT separate
+  non-compliances - do not fail a boundary for a recess.
+
 User question: {query}
 
 Extracted setback facts (validated against the drawing dimensions):
@@ -104,10 +111,13 @@ def format_facts(answer: SetbackAnswer, height: HeightFacts) -> str:
             base = f"{b.role} ({b.side}): building ON the boundary (nil / 0mm setback)"
         elif b.governing_mm is not None:
             provided_m = round(b.governing_mm / 1000, 3)
-            base = f"{b.role} ({b.side}): {provided_m} m provided ({b.governing_reason})"
-            if b.role in ("side", "rear") and req is not None:
-                base += (f"; wall-height-based required setback {req[0]}-{req[1]} m "
-                         f"-> {setback_verdict(provided_m, req)}")
+            if "existing only" in (b.governing_reason or ""):
+                base = f"{b.role} ({b.side}): {provided_m} m EXISTING (retained fabric - not assessed)"
+            else:
+                base = f"{b.role} ({b.side}): {provided_m} m provided ({b.governing_reason})"
+                if b.role in ("side", "rear") and req is not None:
+                    base += (f"; wall-height-based required setback {req[0]}-{req[1]} m "
+                             f"-> {setback_verdict(provided_m, req)}")
         else:
             base = f"{b.role} ({b.side}): setback unresolved"
         recesses = [(v, s) for v, s in b.certified if v != b.governing_mm]
