@@ -13,6 +13,7 @@ from google import genai
 from google.genai import types
 
 from spikes.geometry_extraction.schemas import (
+    BoundaryOutline,
     DimensionCandidate,
     DimensionSelection,
     ElementClassification,
@@ -149,6 +150,29 @@ y is 0 at the top edge and 1 at the bottom edge of THIS image.
    along the TOP of the plan.
 
 Do not report any dimension numbers. Only locate the shapes."""
+
+
+BOUNDARY_PROMPT = """Trace the site / title boundary (the outer allotment
+outline) on this site plan as an ordered list of polygon vertices, in
+page-fraction coordinates where x is 0 at the left and 1 at the right, y is 0 at
+the top and 1 at the bottom of the image. Follow the actual boundary line all the
+way around. Do not report any dimension numbers."""
+
+
+def extract_boundary_polygon(image_path: str, temperature: float = 0.0) -> BoundaryOutline:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, BOUNDARY_PROMPT],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": BoundaryOutline.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return BoundaryOutline.model_validate_json(response.text)
 
 
 def extract_site_regions(image_path: str, temperature: float = 0.0) -> SiteRegions:

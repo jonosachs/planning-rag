@@ -83,6 +83,12 @@ class SiteRegions(BaseModel):
     boundary_top_line: list[Vertex]  # the boundary edge along the top of the crop
 
 
+class BoundaryOutline(BaseModel):
+    """The site/title boundary as an ordered polygon (any orientation)."""
+
+    vertices: list[Vertex]
+
+
 class FeatureVerification(BaseModel):
     """Result of one focused verification: general, query-agnostic.
 
