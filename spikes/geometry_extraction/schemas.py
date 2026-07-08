@@ -182,6 +182,13 @@ class SheetTitles(BaseModel):
     titles: list[str]
 
 
+class RelevantDrawings(BaseModel):
+    """Which sub-drawings the model judges relevant to a user query."""
+
+    titles: list[str]  # exact titles from the sheet
+    reason: str
+
+
 class LabelledViewport(BaseModel):
     x0: float
     y0: float

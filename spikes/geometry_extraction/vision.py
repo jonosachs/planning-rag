@@ -20,6 +20,7 @@ from spikes.geometry_extraction.schemas import (
     DimensionSelection,
     ElementClassification,
     RegionChoice,
+    RelevantDrawings,
     SetbackAssessment,
     SetbackIdentification,
     SheetTitles,
@@ -297,6 +298,33 @@ def extract_site_regions(image_path: str, temperature: float = 0.0) -> SiteRegio
         },
     )
     return SiteRegions.model_validate_json(response.text)
+
+
+SELECT_DRAWINGS_PROMPT = """A user asks: "{query}"
+
+The sheet contains these sub-drawings:
+{titles}
+
+Which sub-drawing(s) are relevant to answering the question? Return the exact
+title(s) from the list and a brief reason. For setbacks, the proposed site plan
+is usually the relevant drawing."""
+
+
+def select_drawings(query: str, titles: list[str], temperature: float = 0.0) -> RelevantDrawings:
+    client = genai.Client(api_key=_require_key())
+    prompt = SELECT_DRAWINGS_PROMPT.format(
+        query=query, titles="\n".join(f"- {t}" for t in titles)
+    )
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[prompt],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": RelevantDrawings.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return RelevantDrawings.model_validate_json(response.text)
 
 
 def list_titles(image_path: str) -> list[str]:
