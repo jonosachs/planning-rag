@@ -68,6 +68,21 @@ class DimensionCandidate(BaseModel):
     line: tuple[float, float, float, float] | None = None  # dim-line seg in page pt
 
 
+class Vertex(BaseModel):
+    x: float  # page fraction 0-1 within the crop (left to right)
+    y: float  # page fraction 0-1 within the crop (top to bottom)
+
+
+class SiteRegions(BaseModel):
+    """Rough regions the model locates - no values, no conventions.
+
+    Vision only outlines *where* things are; code measures the gaps.
+    """
+
+    building_polygon: list[Vertex]  # proposed dwelling footprint
+    boundary_top_line: list[Vertex]  # the boundary edge along the top of the crop
+
+
 class FeatureVerification(BaseModel):
     """Result of one focused verification: general, query-agnostic.
 

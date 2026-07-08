@@ -19,6 +19,7 @@ from spikes.geometry_extraction.schemas import (
     RegionChoice,
     SetbackAssessment,
     SheetTitles,
+    SiteRegions,
 )
 
 load_dotenv()
@@ -135,6 +136,35 @@ def classify_element(image_path: str, value_mm: int) -> ElementClassification:
         },
     )
     return ElementClassification.model_validate_json(response.text)
+
+
+REGIONS_PROMPT = """This is a proposed site plan. Return two shapes using
+page-fraction coordinates where x is 0 at the left edge and 1 at the right edge,
+y is 0 at the top edge and 1 at the bottom edge of THIS image.
+
+1. building_polygon: trace the outline of the PROPOSED building / dwelling
+   footprint (the main built mass) as closely as you can, as an ordered list of
+   vertices. Include recesses/courtyards - follow the actual edge in and out.
+2. boundary_top_line: two points for the site/title boundary line that runs
+   along the TOP of the plan.
+
+Do not report any dimension numbers. Only locate the shapes."""
+
+
+def extract_site_regions(image_path: str, temperature: float = 0.0) -> SiteRegions:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, REGIONS_PROMPT],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": SiteRegions.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return SiteRegions.model_validate_json(response.text)
 
 
 def list_titles(image_path: str) -> list[str]:
