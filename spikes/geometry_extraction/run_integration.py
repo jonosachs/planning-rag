@@ -30,8 +30,13 @@ def main() -> None:
             f"{b.governing_mm}mm ({b.governing_reason})" if b.governing_mm is not None else "UNRESOLVED"
         )
         flag = "  [model/envelope disagree]" if b.model_envelope_disagree else ""
+        # recesses = certified offsets that step further back than the governing value
+        recesses = [(v, s) for v, s in b.certified if v != b.governing_mm]
         print(f"  {b.side} ({b.role}): {gov}{flag}")
-        print(f"        certified: {b.certified or 'none'}   ignored: {b.ignored or 'none'}")
+        if recesses:
+            print(f"        recessed at: {', '.join(f'{v}mm[{s}]' for v, s in recesses)}")
+        if b.ignored:
+            print(f"        ignored: {b.ignored}")
         if b.governing_mm is not None:
             governing.add(b.governing_mm)
 
