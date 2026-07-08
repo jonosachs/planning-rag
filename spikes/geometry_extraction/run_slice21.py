@@ -288,12 +288,16 @@ def label_says_existing(offset: OffsetDim) -> bool:
 
 
 def governing_offset(certified: list[CertifiedOffset]) -> tuple[int | None, str]:
-    # Exclude offsets whose label says "existing" (likely existing fabric / boundary
-    # wall). Proposed or unmarked labels are candidate proposed setbacks; min governs.
+    # Prefer offsets whose label is proposed/unmarked; min governs. If a boundary
+    # has ONLY "existing"-labelled offsets, still report the min but flag it for
+    # review (don't silently drop the boundary's setback).
     candidates = [c.offset.value_mm for c in certified if not label_says_existing(c.offset)]
     if candidates:
         return min(candidates), "min of non-existing offsets"
-    return None, "only 'existing' offsets (excluded)"
+    existing = [c.offset.value_mm for c in certified if label_says_existing(c.offset)]
+    if existing:
+        return min(existing), "existing only (flagged for review)"
+    return None, "no certified offsets"
 
 
 def format_dropped(dropped: list[tuple[OffsetDim, str]]) -> str:
