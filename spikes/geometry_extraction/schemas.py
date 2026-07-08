@@ -189,6 +189,20 @@ class RelevantDrawings(BaseModel):
     reason: str
 
 
+class GroundLevels(BaseModel):
+    """Natural ground RL per orientation, read off the feature survey (AHD).
+
+    Values must come from the survey's extracted level pool; ground varies across
+    the site so each orientation carries its own representative level.
+    """
+
+    front_ground_rl: float | None
+    rear_ground_rl: float | None
+    north_ground_rl: float | None
+    south_ground_rl: float | None
+    reasoning: str
+
+
 class LevelIdentification(BaseModel):
     """The model's read of the key RLs on an elevation (values from the pool)."""
 

@@ -20,6 +20,7 @@ from spikes.geometry_extraction.schemas import (
     DimensionSelection,
     ElementClassification,
     FrontBoundary,
+    GroundLevels,
     LevelIdentification,
     RegionChoice,
     RelevantDrawings,
@@ -322,6 +323,37 @@ nature strip, a vehicle crossover or driveway entrance from the street, or a
 Return front_side as one of top/bottom/left/right (which edge of THIS image the
 front boundary runs along), the street_cue you relied on, and confidence
 (high/medium/low). If no street is identifiable, set confidence low."""
+
+
+GROUND_PROMPT = """This is a feature/site survey showing existing NATURAL ground
+spot levels in AHD. From these level values extracted from the survey:
+{rls}
+
+identify the representative natural ground level in each part of the site:
+- front_ground_rl: the front / street-frontage yard
+- rear_ground_rl: the rear yard (opposite the street)
+- north_ground_rl and south_ground_rl: the north and south sides
+
+Orient using the north point and the street frontage. Use ONLY values from the
+list; ground varies across the site so each area has its own level. Return null
+for any area you cannot determine. Explain briefly."""
+
+
+def identify_ground_levels(image_path: str, rl_values: list[float], temperature: float = 0.0) -> GroundLevels:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    prompt = GROUND_PROMPT.format(rls=", ".join(str(v) for v in rl_values))
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, prompt],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": GroundLevels.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return GroundLevels.model_validate_json(response.text)
 
 
 LEVELS_PROMPT = """This is a building elevation/section. From the reduced-level
