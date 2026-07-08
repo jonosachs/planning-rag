@@ -212,6 +212,18 @@ class LevelIdentification(BaseModel):
     reasoning: str
 
 
+class PageRef(BaseModel):
+    pdf: str
+    page: int
+
+
+class PageSelection(BaseModel):
+    """Pages the model fuzzy-matched to a query from the feature manifest."""
+
+    selections: list[PageRef]
+    reason: str
+
+
 class FrontBoundary(BaseModel):
     """The street-facing (front) boundary; rear/sides are derived from it."""
 

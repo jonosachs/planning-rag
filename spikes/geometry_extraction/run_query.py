@@ -15,12 +15,13 @@ import sys
 
 from src.indexing.chromadb import ChromaDb
 from src.indexing.gemini_embedder import GeminiEmbedder
-from spikes.geometry_extraction.vision import select_drawings
+from spikes.geometry_extraction.manifest import build_page_manifest, format_manifest
+from spikes.geometry_extraction.vision import select_pages
 
-DRAWINGS = [
-    "Proposed Site Plan - setbacks, site coverage, boundaries, private open space, site layout",
-    "Elevations and Sections - building height, wall heights, roof form, RLs",
-    "Feature Survey - existing/natural ground levels (AHD), site survey",
+DRAWING_SET = [
+    "assets/site_plan.pdf",
+    "assets/elevations_and_sections.pdf",
+    "assets/feature_survey.pdf",
 ]
 DEFAULT_QUERY = "What are the building setbacks from each boundary?"
 
@@ -29,10 +30,11 @@ def main() -> None:
     query = " ".join(sys.argv[1:]).strip() or DEFAULT_QUERY
     print(f"query: {query}\n")
 
-    choice = select_drawings(query, DRAWINGS)
-    print("1. relevant drawing(s) selected:")
-    for title in choice.titles:
-        print(f"   - {title}")
+    manifest = build_page_manifest(DRAWING_SET)
+    choice = select_pages(query, format_manifest(manifest))
+    print("1. page(s) selected (fuzzy-matched against the feature manifest):")
+    for ref in choice.selections:
+        print(f"   - {ref.pdf} p.{ref.page}")
     print(f"   reason: {choice.reason}\n")
 
     print("2. relevant planning controls (RAG):")

@@ -22,6 +22,7 @@ from spikes.geometry_extraction.schemas import (
     FrontBoundary,
     GroundLevels,
     LevelIdentification,
+    PageSelection,
     RegionChoice,
     RelevantDrawings,
     SetbackAssessment,
@@ -400,6 +401,36 @@ def identify_front_boundary(image_path: str, temperature: float = 0.0) -> FrontB
         },
     )
     return FrontBoundary.model_validate_json(response.text)
+
+
+SELECT_PAGES_PROMPT = """A user asks: "{query}"
+
+Below is a page-by-page list of features (titles, headings, labels, notable text)
+extracted from the drawing set. Fuzzy-match the query against these features and
+select the page(s) most likely to hold the information needed - the same fact can
+be labelled differently on different plans, so match on meaning, not exact words.
+Base your choice ONLY on the features listed below - do NOT assume where
+information is "usually" located. Return the selected pages (exact pdf path +
+page number) and a brief reason citing the matching features.
+
+Pages:
+{pages}
+"""
+
+
+def select_pages(query: str, manifest_text: str, temperature: float = 0.0) -> PageSelection:
+    client = genai.Client(api_key=_require_key())
+    prompt = SELECT_PAGES_PROMPT.format(query=query, pages=manifest_text)
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[prompt],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": PageSelection.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return PageSelection.model_validate_json(response.text)
 
 
 def select_drawings(query: str, titles: list[str], temperature: float = 0.0) -> RelevantDrawings:
