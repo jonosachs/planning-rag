@@ -166,10 +166,12 @@ building wall. For each setback give: role (front/rear/side), printed_label (the
 dimension text exactly as printed, e.g. "nom 4400 (existing) to title"),
 value_mm, measures_to (what the building end reaches, e.g. existing building
 wall / proposed addition wall), status (existing/proposed/retained/unknown), and
-location_hint (e.g. far left, bottom right).
+x,y = the position of that dimension on the plan as page fractions (x: 0 left to
+1 right, y: 0 top to 1 bottom).
 
-Only boundary-to-building setbacks. Exclude internal room dimensions, courtyard
-widths, and overall site/running dimensions."""
+List EACH distinct setback dimension separately, even if two have the same value
+at different locations. Only boundary-to-building setbacks. Exclude internal room
+dimensions, courtyard widths, and overall site/running dimensions."""
 
 
 def identify_setbacks(image_path: str, temperature: float = 0.0) -> SetbackIdentification:

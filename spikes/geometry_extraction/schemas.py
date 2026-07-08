@@ -92,7 +92,8 @@ class IdentifiedSetback(BaseModel):
     value_mm: int
     measures_to: str  # what the building end reaches
     status: str  # existing | proposed | retained | unknown
-    location_hint: str  # e.g. "far left", "bottom right"
+    x: float  # position of this dimension on the plan, page fraction 0-1 (left->right)
+    y: float  # page fraction 0-1 (top->bottom)
 
 
 class SetbackIdentification(BaseModel):
