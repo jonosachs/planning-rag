@@ -100,6 +100,25 @@ class SetbackIdentification(BaseModel):
     setbacks: list[IdentifiedSetback]
 
 
+class OffsetDim(BaseModel):
+    value_mm: int
+    printed_label: str
+    x: float  # page fraction of the dimension's position
+    y: float
+    status: str  # existing | proposed | retained | unknown
+
+
+class BoundarySide(BaseModel):
+    side: str  # top | bottom | left | right
+    role: str  # front | rear | side
+    building_on_boundary: bool  # model's opinion (cross-checked by the envelope)
+    offsets: list[OffsetDim]  # where the building steps back from this boundary
+
+
+class BoundaryReport(BaseModel):
+    sides: list[BoundarySide]
+
+
 class BoundaryOutline(BaseModel):
     """The site/title boundary as an ordered polygon (any orientation)."""
 

@@ -14,6 +14,7 @@ from google.genai import types
 
 from spikes.geometry_extraction.schemas import (
     BoundaryOutline,
+    BoundaryReport,
     DimensionCandidate,
     DimensionSelection,
     ElementClassification,
@@ -188,6 +189,36 @@ def identify_setbacks(image_path: str, temperature: float = 0.0) -> SetbackIdent
         },
     )
     return SetbackIdentification.model_validate_json(response.text)
+
+
+ASSESS_BOUNDARIES_PROMPT = """This is a proposed site plan. For EACH side of the
+site/title boundary (top, bottom, left, right of the plan), report:
+- side (top/bottom/left/right) and role (front/rear/side)
+- building_on_boundary: does the proposed building sit directly ON that boundary
+  anywhere (a zero setback)?
+- offsets: the setback/offset dimensions ALONG that side where the building steps
+  away from the boundary. For each give value_mm, printed_label (exactly as
+  printed), x,y (page-fraction position of the dimension), and status
+  (existing/proposed/retained/unknown).
+
+Do not invent numbers - read the printed dimensions. List each distinct offset
+separately even if two share a value."""
+
+
+def assess_boundaries(image_path: str, temperature: float = 0.0) -> BoundaryReport:
+    client = genai.Client(api_key=_require_key())
+    with open(image_path, "rb") as f:
+        image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[image, ASSESS_BOUNDARIES_PROMPT],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": BoundaryReport.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return BoundaryReport.model_validate_json(response.text)
 
 
 def extract_boundary_polygon(image_path: str, temperature: float = 0.0) -> BoundaryOutline:
