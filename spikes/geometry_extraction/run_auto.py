@@ -38,8 +38,14 @@ def main() -> None:
 
 def show_geometric(answer, response) -> None:
     print(f"drawing: {answer.drawing}; front = {answer.front_side} side")
+    recesses = {b.side: [(v, s) for v, s in b.certified if v != b.governing_mm]
+                for b in answer.boundaries}
     for f in response.findings:
-        print(f"  {f.boundary}: {VERDICT[f.complies]} - {f.reasoning[:120]}")
+        print(f"  {f.boundary}: {VERDICT[f.complies]}")
+        print(f"      {f.reasoning}")
+        for side, rec in recesses.items():
+            if side in f.boundary.lower() and rec:
+                print(f"      recessed at: {', '.join(f'{v}mm[{s}]' for v, s in rec)}")
     print(f"\noverall: {response.overall}")
     print("citations: " + ", ".join(f"{c.ordinance_id} {c.title}" for c in response.citations))
 
