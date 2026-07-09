@@ -212,6 +212,13 @@ class LevelIdentification(BaseModel):
     reasoning: str
 
 
+class RouteDecision(BaseModel):
+    """How to answer a query: read a stated value, or measure geometry."""
+
+    approach: str  # "stated" | "geometric"
+    reason: str
+
+
 class PageRef(BaseModel):
     pdf: str
     page: int

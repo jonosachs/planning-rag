@@ -23,6 +23,7 @@ from spikes.geometry_extraction.schemas import (
     GroundLevels,
     LevelIdentification,
     PageSelection,
+    RouteDecision,
     RegionChoice,
     RelevantDrawings,
     SetbackAssessment,
@@ -416,6 +417,32 @@ page number) and a brief reason citing the matching features.
 Pages:
 {pages}
 """
+
+
+ROUTE_PROMPT = """Decide how to answer this planning query:
+- "stated": the answer is a value stated on a drawing - e.g. a site
+  statistics / data block giving site area, site coverage, private open space,
+  permeability, gross floor area, or a stated building height.
+- "geometric": the answer needs geometry measured across the drawing - e.g.
+  per-boundary building setbacks from the property boundary.
+
+Query: {query}
+
+Return approach ("stated" or "geometric") and a brief reason."""
+
+
+def route_query(query: str, temperature: float = 0.0) -> RouteDecision:
+    client = genai.Client(api_key=_require_key())
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[ROUTE_PROMPT.format(query=query)],
+        config={
+            "response_mime_type": "application/json",
+            "response_json_schema": RouteDecision.model_json_schema(),
+            "temperature": temperature,
+        },
+    )
+    return RouteDecision.model_validate_json(response.text)
 
 
 def select_pages(query: str, manifest_text: str, temperature: float = 0.0) -> PageSelection:
