@@ -13,6 +13,7 @@ import sys
 
 from spikes.geometry_extraction.compliance import assess_setback_compliance
 from spikes.geometry_extraction.read_answer import assess_query
+from spikes.geometry_extraction.triage import triage_project
 from spikes.geometry_extraction.vision import route_query
 
 SITE_PLAN_PDF = "assets/site_plan.pdf"
@@ -30,10 +31,20 @@ def main() -> None:
     print(f"query: {query}")
     print(f"route: {route.approach} - {route.reason}\n")
 
-    if route.approach == "geometric":
+    if route.approach == "overall":
+        show_triage(*triage_project(DRAWING_SET, SITE_PLAN_PDF))
+    elif route.approach == "geometric":
         show_geometric(*assess_setback_compliance(SITE_PLAN_PDF, query))
     else:
         show_stated(*assess_query(query, DRAWING_SET))
+
+
+def show_triage(results, decision) -> None:
+    print("triage - control checklist:")
+    for r in results:
+        print(f"  {r.control}: {r.verdict.upper()}")
+        print(f"      {r.detail}")
+    print(f"\nDECISION: {decision}")
 
 
 def show_geometric(answer, response) -> None:

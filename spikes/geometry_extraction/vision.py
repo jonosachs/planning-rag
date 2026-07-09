@@ -420,15 +420,17 @@ Pages:
 
 
 ROUTE_PROMPT = """Decide how to answer this planning query:
-- "stated": the answer is a value stated on a drawing - e.g. a site
-  statistics / data block giving site area, site coverage, private open space,
-  permeability, gross floor area, or a stated building height.
-- "geometric": the answer needs geometry measured across the drawing - e.g.
+- "overall": the query asks whether the WHOLE proposal/renovation complies (not
+  one specific control) - it needs the full checklist of controls assessed.
+- "stated": one control whose answer is a value stated on a drawing - e.g. site
+  area, site coverage, private open space, permeability, gross floor area, or a
+  stated building height.
+- "geometric": one control needing geometry measured across the drawing - e.g.
   per-boundary building setbacks from the property boundary.
 
 Query: {query}
 
-Return approach ("stated" or "geometric") and a brief reason."""
+Return approach ("overall", "stated" or "geometric") and a brief reason."""
 
 
 def route_query(query: str, temperature: float = 0.0) -> RouteDecision:
