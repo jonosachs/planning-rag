@@ -1,0 +1,161 @@
+Final recommendations for reliable setback extraction
+
+The app should not ask an LLM to read building setbacks directly from drawings.
+The reliable approach is a geometry-first extraction pipeline where code builds
+deterministic evidence and the vision model is used only for narrow semantic
+verification.
+
+Core principle
+
+A setback is not just a number near a boundary. It is a relationship:
+
+  boundary edge -> dimension object -> target building element
+
+The app should extract and verify that relationship before emitting a setback
+fact.
+
+Recommended pipeline
+
+1. Segment each sheet into drawing viewports.
+
+Use the PDF's own clip/scissor rectangles to isolate each sub-drawing. This
+prevents the app from mixing site plans, details, elevations, and drawings at
+different scales.
+
+2. Infer and validate scale per viewport.
+
+Do not hard-code one scale such as 1:100. Read scale labels near the viewport,
+then validate the scale by comparing printed dimension values against measured
+PDF geometry. If enough dimensions agree within tolerance, accept the scale.
+
+3. Reconstruct real dimension objects.
+
+The current spike finds dimension candidates by matching numbers to nearby
+segments. That is useful for exploration, but production logic should reconstruct
+proper dimension objects:
+
+  - printed dimension value
+  - dimension line
+  - extension lines
+  - ticks or arrow endpoints
+  - endpoint coordinates
+  - nearby labels
+  - measured span at viewport scale
+
+The printed dimension should be canonical. Geometry measurement should validate
+the printed value, not replace it. If the drawing says 10800 and geometry
+measures 10854, report 10800mm and use the measured value as a confidence check.
+
+4. Build a site boundary model.
+
+Do not rely on page-relative top/bottom/left/right boundaries outside the spike.
+Real sites may be rotated, irregular, curved, corner lots, or battle-axe lots.
+Represent boundaries as polylines with stable IDs, then classify their planning
+role separately:
+
+  - front boundary
+  - rear boundary
+  - side boundary
+  - street-side boundary
+  - other relevant boundary
+
+5. Build a target element model.
+
+Do not hard-code "proposed dwelling wall" as the only target. The relevant
+target depends on the planning question. It may be a proposed wall, retained
+existing wall, garage, verandah, eave, balcony, window, secluded private open
+space, fence, or another feature.
+
+6. Derive candidate setback relations.
+
+For each relevant boundary, find dimension objects where:
+
+  - one endpoint anchors to the boundary, and
+  - the other endpoint anchors to the relevant target element.
+
+Exclude dimensions that measure to:
+
+  - existing boundary walls when the question asks for the proposed dwelling
+  - fences
+  - setout points
+  - site length or running dimensions
+  - internal building dimensions
+  - unrelated landscape or courtyard features
+
+7. Verify semantics with focused vision checks.
+
+Avoid whole-sheet or whole-plan LLM judgement for setbacks. The broad call in
+the spike is too easy to confuse, especially for cases like 9100mm versus
+10800mm.
+
+Use focused verification instead:
+
+  - mark one candidate dimension or boundary
+  - crop tightly around the relevant context
+  - ask one narrow yes/no question
+  - use temperature 0
+  - require structured output and confidence
+
+Example verification questions:
+
+  - Does this marked dimension terminate at the proposed dwelling wall?
+  - Does this marked dimension terminate at an existing wall, fence, setout
+    point, or other non-dwelling feature?
+  - Does the building or paved/hatched area touch this marked boundary anywhere?
+
+8. Treat zero setbacks separately.
+
+A zero setback often has no dimension line because the wall coincides with the
+boundary. Do not treat "no dimension found" as proof that the setback is unknown.
+
+Detect zero setbacks through boundary/building adjacency. Use vector geometry
+where possible. Where the wall line is visually hidden by overlap, use focused
+vision verification on the hatch/fill relationship, as explored in the later
+spike slices.
+
+9. Fail closed.
+
+Reliability means avoiding plausible wrong answers. Emit a setback fact only
+when all required evidence is strong:
+
+  - viewport identified
+  - scale validated
+  - dimension object reconstructed
+  - one endpoint anchored to the relevant boundary
+  - the other endpoint anchored to the relevant target element
+  - proposed/existing/fence/setout ambiguity resolved with high confidence
+
+If these checks do not pass, return unresolved evidence with a caveat instead of
+guessing.
+
+Suggested architecture
+
+Represent the drawing as a typed evidence graph:
+
+  - Viewport: page region, title, scale, scale confidence
+  - BoundaryEdge: polyline geometry, labels, planning role, confidence
+  - Dimension: printed value, unit, line geometry, endpoints, scale validation
+  - Element: proposed wall, existing wall, fence, setout, landscape, etc.
+  - Relation: dimension measures from boundary X to element Y
+  - Verification: focused model judgement, crop path, question, confidence
+
+The final setback value should be derived from accepted relations, not read
+directly by the LLM.
+
+Practical next step
+
+Promote the spike into a small geometry extraction module that produces
+auditable setback candidates and verification records. Keep the current
+whole-sheet drawing extraction for broad textual facts, but do not use it as the
+source of truth for building setbacks.
+
+The production flow should be:
+
+  PDF geometry
+  -> viewport and scale extraction
+  -> dimension object reconstruction
+  -> boundary and element modelling
+  -> candidate setback relations
+  -> focused visual verification
+  -> deterministic setback derivation
+
