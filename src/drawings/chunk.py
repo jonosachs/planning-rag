@@ -43,8 +43,8 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk] | None:
     return chunks
 
 
-def build_metadata(cd: ClauseDoc, chunk_index) -> dict:
-    return ClauseMetaData(
+def build_metadata(cd: ClauseDoc, chunk_index: int) -> dict:
+    metadata = ClauseMetaData(
         ordinance_id=cd.ordinance_id,
         ordinance_type=cd.ordinance_type,
         ordinance_level=cd.ordinance_level,
@@ -54,3 +54,4 @@ def build_metadata(cd: ClauseDoc, chunk_index) -> dict:
         title=cd.title,
         chunk_index=chunk_index,
     )
+    return metadata.model_dump()

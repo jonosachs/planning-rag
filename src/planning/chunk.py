@@ -1,5 +1,5 @@
-from src.planning.schemas import ClauseChunk, ClauseDoc, ClauseMetaData
-from src.rag.schemas import Chunk
+from src.planning.schemas import ClauseDoc, ClauseMetaData
+from src.indexing.schemas import Chunk
 
 
 def batch_chunk(clause_docs: list[ClauseDoc]):
@@ -15,7 +15,10 @@ def batch_chunk(clause_docs: list[ClauseDoc]):
     return output
 
 
-def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[ClauseChunk]:
+def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
+    if not clause.content:
+        return []
+
     chunks = []
     chunk_index = 0
     text = ""
@@ -43,8 +46,10 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[ClauseChunk]:
     return chunks
 
 
-def build_metadata(cd: ClauseDoc, chunk_index):
-    return ClauseMetaData(
+def build_metadata(cd: ClauseDoc, chunk_index: int) -> dict:
+    # Chunk.metadata is a plain dict so the indexing layer stays source-agnostic;
+    # ClauseMetaData still validates the shape on the way out.
+    metadata = ClauseMetaData(
         ordinance_id=cd.ordinance_id,
         ordinance_type=cd.ordinance_type,
         ordinance_level=cd.ordinance_level,
@@ -54,3 +59,4 @@ def build_metadata(cd: ClauseDoc, chunk_index):
         title=cd.title,
         chunk_index=chunk_index,
     )
+    return metadata.model_dump()

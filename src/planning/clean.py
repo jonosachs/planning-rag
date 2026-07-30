@@ -2,10 +2,13 @@ from bs4 import BeautifulSoup as bs
 from src.planning.schemas import ClauseDoc, ClauseRef
 
 
-def build_clause_docs(scheme_id: str, clause_docs: list[dict]) -> list[ClauseDoc]:
+def build_clause_docs(clause_docs: list[dict]) -> list[ClauseDoc]:
     clauses = []
 
     for c in clause_docs:
+        # Each clause payload names its own scheme, so the id does not have to be
+        # threaded down from the caller.
+        scheme_id = c["planningScheme"]["schemeID"]
         clause = ClauseDoc(
             ordinance_id=c["ordinanceID"],
             ordinance_type=c["ordinanceType"],
@@ -39,8 +42,8 @@ def build_clause_refs(scheme_id: str, clause_nodes: list[dict]) -> list[ClauseRe
 
 def parse_as_clause_ref(data, scheme_id) -> ClauseRef:
     clause_ref = ClauseRef(
-        data["ordinanceID"],
-        data["title"],
+        ordinance_id=data["ordinanceID"],
+        title=data["title"],
         scheme_id=scheme_id,
     )
     return clause_ref

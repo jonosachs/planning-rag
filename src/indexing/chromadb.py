@@ -15,12 +15,12 @@ class ChromaDb(VectorStore):
         except Exception as e:
             raise RuntimeError(f"⚠️ Failed to delete db {self.collection}: {e}") from e
 
-    def write(self, embedded_chunks: list[EmbeddedChunk], collection_name):
-        collection = self.client.get_or_create_collection(name=collection_name)
+    def write(self, embedded_chunks: list[EmbeddedChunk]):
+        collection = self.client.get_or_create_collection(name=self.collection)
         for chunk in embedded_chunks:
             try:
                 collection.upsert(
-                    ids=[uuid.uuid4()],
+                    ids=[str(uuid.uuid4())],
                     documents=[chunk.text],
                     embeddings=[chunk.embedded_text],
                     metadatas=[chunk.metadata],
@@ -36,7 +36,7 @@ class ChromaDb(VectorStore):
         )
         return results
 
-    def get_all(self, collection_name) -> dict:
-        collection = self.client.get_or_create_collection(name=collection_name)
+    def get_all(self) -> dict:
+        collection = self.client.get_or_create_collection(name=self.collection)
         records = collection.get(include=["documents", "metadatas"])
         return records
