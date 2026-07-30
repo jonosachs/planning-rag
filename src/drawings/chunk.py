@@ -43,7 +43,7 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk] | None:
     return chunks
 
 
-def build_metadata(cd: ClauseDoc, chunk_index) -> dict:
+def build_metadata(cd: ClauseDoc, chunk_index) -> ClauseMetaData:
     return ClauseMetaData(
         ordinance_id=cd.ordinance_id,
         ordinance_type=cd.ordinance_type,

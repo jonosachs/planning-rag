@@ -10,6 +10,13 @@ from src.indexing.pipeline import run_indexing_pipeline
 from src.llm.gemini_llm import GeminiLlm
 from dataclasses import dataclass
 
+# Planning constants
+PLAN_SCHEME = "Port Phillip"
+PLAN_KEY_WORD_FILTER = ["residential", "overshadow", "coverage", "height", ""]
+PLAN_MAX_CLAUSES = 50  # excludes subclauses
+
+DWGS_PATH = "assets/plans.pdf"
+
 
 @dataclass
 class IndexConfig:
@@ -18,29 +25,30 @@ class IndexConfig:
     store: VectorStore
 
 
-def run_indexing():
-    jobs = [
-        IndexConfig(
-            source=PlanningSource(planning_scheme="Port Phillip"),
-            embedder=GeminiEmbedder(),
-            store=ChromaDb(collection_name="planning"),
-        ),
-        IndexConfig(
-            source=DrawingsSource(pdf_path="assets/plans.pdf"),
-            embedder=GeminiEmbedder(),
-            store=ChromaDb(collection_name="planning"),
-        ),
-    ]
-    for job in jobs:
-        run_indexing_pipeline(job.source, job.embedder, job.store)
+def run_planning_indexing(key_word=None):
+    source = PlanningSource(
+        planning_scheme=PLAN_SCHEME,
+        key_word=key_word or PLAN_KEY_WORD_FILTER,
+        max_results=PLAN_MAX_CLAUSES,
+    )
+    embedder = GeminiEmbedder()
+    store = ChromaDb(collection_name="planning")
+
+    run_indexing_pipeline(source, embedder, store)
+
+
+def run_drawing_indexing():
+    source = DrawingsSource(pdf_path=DWGS_PATH)
+    embedder = GeminiEmbedder()
+    store = ChromaDb(collection_name="drawings")
+
+    run_indexing_pipeline(source, embedder, store)
 
 
 def run_query():
     llm = GeminiLlm(schema=LlmPlanningResponse)
     embedder = GeminiEmbedder()
     store = ChromaDb(collection_name="planning")
-
-    run_indexing()
 
     ui = Cli()
     query = ui.get_user_query()
@@ -52,5 +60,5 @@ def run_query():
     ui.show_cited_response(response)
 
 
-if __name__ == "__main__":
-    run_query()
+# if __name__ == "__main__":
+#     run_query()

@@ -1,5 +1,5 @@
 from src.drawings.schemas import PageFeautres
-from src.drawings.pipeline import extract_drawing_data
+from src.drawings.pipeline import run_fetch_drawings_pipeline
 from src.drawings.chunk import batch_chunk
 from src.indexing.interfaces import DataSource
 from src.indexing.schemas import Chunk
@@ -10,7 +10,7 @@ class DrawingsSource(DataSource):
         self.pdf_path = pdf_path
 
     def load(self) -> list[PageFeautres]:
-        features = extract_drawing_data(self.pdf_path)
+        features = run_fetch_drawings_pipeline(self.pdf_path)
         return features
 
     def chunk(self, items) -> list[Chunk]:

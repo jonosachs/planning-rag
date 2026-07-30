@@ -10,7 +10,7 @@ from src.drawings.clean import render_pages
 EXCLUDED_DWGS = ["joinery", "wet", "door", "window", "detail", "demolition"]
 
 
-def extract_drawing_data(pdf_path) -> list[PageFeautres]:
+def run_fetch_drawings_pipeline(pdf_path) -> list[PageFeautres]:
     print("Getting drawings data..")
 
     # Extract all pdf pages
@@ -29,4 +29,4 @@ def extract_drawing_data(pdf_path) -> list[PageFeautres]:
 
 
 if __name__ == "__main__":
-    print(extract_drawing_data("assets/plans.pdf")[0])
+    print(run_fetch_drawings_pipeline("assets/plans.pdf")[0])
