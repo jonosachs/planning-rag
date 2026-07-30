@@ -56,7 +56,7 @@ Source: `https://api.app.planning.vic.gov.au/planning/v4/schemes/{schemeID}`
 
 ```text
 src/
-├── main.py              # entry points: run_planning_indexing / run_drawing_indexing / run_query
+├── main.py              # CLI: index-planning / index-drawings / query
 ├── planning/            # DataSource: fetch scheme → flatten clause tree → HTML→text → chunk
 ├── drawings/            # DataSource: PDF pages → planning-relevant pages → render → text features → chunk
 ├── indexing/            # DataSource / Embedder / VectorStore interfaces + Gemini + ChromaDB impls
@@ -70,21 +70,25 @@ drawings share one indexing path and the Gemini/Chroma choices are swappable.
 
 ### Running it
 
-There is no `__main__` block wired up yet (it is commented out in `src/main.py`), so
-call the entry points directly:
+`src/main.py` exposes three subcommands:
 
 ```sh
 # Seed the planning collection (Port Phillip, keyword-filtered, 50 clauses max)
-.venv/bin/python -c "from src.main import run_planning_indexing; run_planning_indexing()"
+.venv/bin/python -m src.main index-planning
+
+# Override the clause title filter (repeatable)
+.venv/bin/python -m src.main index-planning --keyword overshadow --keyword setback
 
 # Seed the drawings collection from assets/plans.pdf
-.venv/bin/python -c "from src.main import run_drawing_indexing; run_drawing_indexing()"
+.venv/bin/python -m src.main index-drawings
 
 # Ask a question
-.venv/bin/python -c "from src.main import run_query; run_query()"
+.venv/bin/python -m src.main query
 ```
 
-Scheme, keyword filter and clause cap are constants at the top of `src/main.py`.
+Scheme, default keyword filter and clause cap are constants at the top of
+`src/main.py`. Chunk ids are `scheme:ordinance:chunk`, so re-running an indexing
+command upserts over the previous run rather than duplicating it.
 
 ---
 
@@ -175,8 +179,8 @@ is validating (evidence graph: boundary edge → dimension object → building e
 
 ## Assets
 
-`.gitignore` excludes `assets/`, `tests/`, `admin/` and `chroma_db/`, so a fresh clone
-has no drawings or index. The geometry spike expects:
+`.gitignore` excludes `assets/`, `tests/`, `admin/`, `chroma_db/` and `tmp/`, so a
+fresh clone has no drawings or index. The geometry spike expects:
 
 ```text
 assets/site_plan.pdf
@@ -185,7 +189,12 @@ assets/feature_survey.pdf
 assets/plans.pdf              # full set, used by the drawings indexer
 ```
 
-`tmp/` holds intermediate renders, crops and run logs.
+`tmp/` holds intermediate renders, crops and run logs. It is git-ignored and no
+code creates it, so make it before running any spike entry point:
+
+```sh
+mkdir -p tmp
+```
 
 ---
 
@@ -208,8 +217,8 @@ is git-ignored, so the suite is local-only.
 - `requirements.txt` and `pyproject.toml` list dependencies separately and can drift.
 - `[tool.pytest.ini_options]` is configured but `pytest` is declared in neither
   dependency list, so `python -m pytest` fails on a clean install.
-- `src/main.py`'s `if __name__ == "__main__"` block is commented out — there is no
-  console entry point.
+- The spike hardcodes `tmp/…` output paths in ~20 files without creating the
+  directory, so a fresh clone fails until `mkdir -p tmp` is run.
 - `src/llm/interace.py` is a typo for `interface.py`.
 - `src/drawings/schemas.py` exports `PageFeautres` (typo for `PageFeatures`), which
   collides conceptually with `manifest.PageFeatures` in the spike.

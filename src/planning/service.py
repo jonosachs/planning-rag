@@ -7,18 +7,17 @@ class PlanningSource(DataSource):
     def __init__(
         self,
         planning_scheme: str,
-        key_word: str | None = None,
+        key_words: list[str] | None = None,
         max_results: int | None = None,
     ):
         self._planning_scheme = planning_scheme
-        self._key_word = key_word
-        self._max_results = max_results or 100
-        pass
+        self._key_words = key_words
+        self._max_results = max_results
 
     def load(self):
         clauses = run_fetch_scheme_pipeline(
             scheme=self._planning_scheme,
-            key_word=self._key_word,
+            key_words=self._key_words,
             max_results=self._max_results,
         )
         return clauses

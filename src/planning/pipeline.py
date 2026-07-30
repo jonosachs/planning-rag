@@ -14,7 +14,9 @@ from src.planning.schemas import ClauseDoc, ClauseRef
 
 
 def fetch_clause_refs(
-    scheme: str, key_word: str | None = None, max_results: int | None = None
+    scheme: str,
+    key_words: list[str] | None = None,
+    max_results: int | None = None,
 ) -> list[ClauseRef]:
     # Get index of all scheme ids
     schemes = fetch_schemes_index()
@@ -29,11 +31,15 @@ def fetch_clause_refs(
 
     print(f"ℹ️ Found {len(clause_refs)} clauses")
 
-    # Filter by key words if provided
-    if key_word:
-        print(f"ℹ️ Filtering results for key word '{key_word}'")
+    # Filter by key words if provided. Blank entries would match every title,
+    # so drop them rather than silently disabling the filter.
+    terms = [k.lower() for k in key_words or [] if k.strip()]
+    if terms:
+        print(f"ℹ️ Filtering results for key words {terms}")
         clause_refs = [
-            node for node in clause_refs if key_word.lower() in node["title"].lower()
+            node
+            for node in clause_refs
+            if any(term in node["title"].lower() for term in terms)
         ]
 
     # Trim number nodes to user max if specified
@@ -57,9 +63,11 @@ def parse_html(clause_docs: list[ClauseDoc]) -> list[ClauseDoc]:
 
 
 def run_fetch_scheme_pipeline(
-    scheme, key_word=None, max_results=None
+    scheme: str,
+    key_words: list[str] | None = None,
+    max_results: int | None = None,
 ) -> list[ClauseDoc]:
-    clause_refs = fetch_clause_refs(scheme, key_word, max_results)
+    clause_refs = fetch_clause_refs(scheme, key_words, max_results)
     clause_payloads = fetch_clause_payloads(clause_refs)
     clause_docs = build_clause_docs(clause_payloads)
     cleaned = parse_html(clause_docs)
