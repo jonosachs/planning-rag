@@ -61,22 +61,24 @@ def main() -> None:
             if not any(t.text.strip() == str(o.value_mm)
                        and math.dist(t.center, (mx, my)) <= NEAR_PT for t in tokens):
                 continue  # not certified against text
-            proposed = focused_is_proposed(candidates, o.value_mm, mx, my)
-            resolved.append((o.value_mm, proposed))
+            dwelling = focused_is_dwelling(candidates, o.value_mm, mx, my)
+            resolved.append((o.value_mm, dwelling))
 
-        proposed_vals = [v for v, p in resolved if p]
-        offs = ", ".join(f"{v}mm[{'proposed' if p else 'existing/other'}]" for v, p in resolved) or "none"
+        dwelling_vals = [v for v, d in resolved if d]
+        offs = ", ".join(f"{v}mm[{'dwelling' if d else 'excluded'}]" for v, d in resolved) or "none"
         if on:
             gov = "0mm (on boundary)"
-        elif proposed_vals:
-            gov = f"{min(proposed_vals)}mm"
+        elif dwelling_vals:
+            gov = f"{min(dwelling_vals)}mm"
         else:
             gov = "UNRESOLVED (fail closed)"
         print(f"  {s.side} ({s.role}): governing = {gov}")
         print(f"        {'sits on boundary, except: ' if on else 'offsets: '}{offs}\n")
 
 
-def focused_is_proposed(candidates, value, mx, my) -> bool:
+def focused_is_dwelling(candidates, value, mx, my) -> bool:
+    """A dwelling wall in the final scheme (proposed OR retained-existing) counts;
+    an existing boundary wall, fence or setout does not."""
     matches = [c for c in candidates if c.annotated_value == value and c.line]
     if not matches:
         return False
@@ -86,7 +88,7 @@ def focused_is_proposed(candidates, value, mx, my) -> bool:
            max(c.line[0], c.line[2]), max(c.line[1], c.line[3]))
     render_marked_crop(SAMPLE_PDF, 0, box, "tmp/s20_mark.png", margin=240, zoom=6)
     r = classify_element("tmp/s20_mark.png", value)
-    return r.is_proposed_dwelling and r.confidence.lower() == "high"
+    return r.is_building_wall and r.confidence.lower() == "high"
 
 
 def envelope_on_boundary(rect, wpx, hpx, mask) -> dict:

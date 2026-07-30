@@ -46,11 +46,14 @@ def main() -> None:
     print("TASK A - element classification (dim 9100):")
     print(f"  finding={a.finding[:80]!r} holds(dwelling)={a.holds} conf={a.confidence}\n")
 
-    # Task B: on/offset condition on the north boundary - run twice for stability
+    # Task B: on/offset condition on the north boundary - wide crop of the whole
+    # site-plan drawing (bounded to its viewport) so the building shape is visible
     box = north_boundary_box(site_geo)
-    print("TASK B - on/offset condition (north boundary), run twice @ temp 0:")
+    site_bound = (rect.x0, rect.y0, rect.x1, rect.y1)
+    print("TASK B - on/offset condition (north boundary), wide crop, run twice @ temp 0:")
     for i in (1, 2):
-        b = verify_feature(SAMPLE_PDF, 0, box, CONDITION_Q, f"tmp/verify_north_{i}.png")
+        b = verify_feature(SAMPLE_PDF, 0, box, CONDITION_Q, f"tmp/verify_north_{i}.png",
+                           margin=1000, bound=site_bound)
         print(f"  run {i}: on_boundary={b.holds} conf={b.confidence} finding={b.finding[:70]!r}")
 
 

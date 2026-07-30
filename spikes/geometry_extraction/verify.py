@@ -40,8 +40,10 @@ def verify_feature(
     margin: float = 240.0,
     zoom: float = 6.0,
     temperature: float = 0.0,
+    bound: tuple[float, float, float, float] | None = None,
+    mark: bool = True,
 ) -> FeatureVerification:
-    render_marked_crop(pdf_path, page_number, mark_box, out_path, margin, zoom)
+    render_marked_crop(pdf_path, page_number, mark_box, out_path, margin, zoom, bound, mark)
     client = genai.Client(api_key=_require_key())
     with open(out_path, "rb") as f:
         image = types.Part.from_bytes(data=f.read(), mime_type="image/png")
@@ -64,12 +66,17 @@ def render_marked_crop(
     out_path: str,
     margin: float,
     zoom: float,
+    bound: tuple[float, float, float, float] | None = None,
+    mark: bool = True,
 ) -> str:
     page = fitz.open(pdf_path)[page_number]
     box = fitz.Rect(*mark_box)
-    page.draw_rect(box, color=(1, 0, 0), width=2)
+    if mark:
+        page.draw_rect(box, color=(1, 0, 0), width=2)
     crop = fitz.Rect(box.x0 - margin, box.y0 - margin,
                      box.x1 + margin, box.y1 + margin) & page.rect
+    if bound is not None:
+        crop &= fitz.Rect(*bound)  # keep the crop within one drawing's viewport
     page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=crop, alpha=False).save(out_path)
     return out_path
 
