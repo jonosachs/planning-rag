@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from chromadb.api.types import GetResult, QueryResult
 from src.indexing.schemas import Chunk, EmbeddedChunk
 
 
@@ -23,13 +24,15 @@ class Embedder(ABC):
 
 class VectorStore(ABC):
     @abstractmethod
-    def write(self, embedded_chunks: list[EmbeddedChunk]):
+    def write(self, embedded_chunks: list[EmbeddedChunk]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def run_query(self, embedded_query: list[float], n_results: int = 10) -> dict:
+    def run_query(
+        self, embedded_query: list[float], n_results: int = 10
+    ) -> QueryResult:
         raise NotImplementedError
 
     @abstractmethod
-    def get_all(self) -> dict:
+    def get_all(self) -> GetResult:
         raise NotImplementedError

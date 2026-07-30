@@ -29,12 +29,15 @@ class GeminiEmbedder(Embedder):
         self._client = genai.Client(api_key=api_key)
         self._model = "gemini-embedding-001"
 
-    def _fetch_embedding(self, text: str) -> list:
+    def _fetch_embedding(self, text: str) -> list[float]:
         for num_attempts in range(self._max_attempts):
             try:
                 result = self._client.models.embed_content(
                     model=self._model, contents=text
                 )
+
+                if not result.embeddings or result.embeddings[0].values is None:
+                    raise RuntimeError("Embedding response did not include values")
 
                 return result.embeddings[0].values
 

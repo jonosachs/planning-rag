@@ -7,5 +7,7 @@ def run_indexing_pipeline(source: DataSource, embedder: Embedder, store: VectorS
     embedded_chunks = embedder.embed_chunks(chunks)
     store.write(embedded_chunks)
 
-    n = len(store.get_all()["ids"])
-    print(f"✅ DB seeded with {n} chunks..")
+    n_chunks = len(chunks)
+    n_total = len(store.get_all()["ids"])
+    print(f"✅ DB seeded with {n_chunks} chunks..")
+    print(f"DB total records: {n_total}")

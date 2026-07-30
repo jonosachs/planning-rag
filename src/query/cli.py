@@ -10,6 +10,10 @@ class Cli(UserInterface):
         print(f"\nAnswer: {response.answer}\n")
         print("Citations:")
 
+        if not response.citations:
+            print("None")
+            return
+
         for count, citation in enumerate(response.citations):
             citation_text = [
                 f"{key}: {value}" for key, value in citation.model_dump().items()

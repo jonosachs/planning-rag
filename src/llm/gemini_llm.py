@@ -5,14 +5,18 @@ from google.genai import errors
 import time
 from google.genai.client import Client
 from pydantic import BaseModel
+from typing import Generic, TypeVar
 
 load_dotenv()
 
 
-class GeminiLlm:
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
+
+
+class GeminiLlm(Generic[SchemaT]):
     def __init__(
         self,
-        schema: type[BaseModel],
+        schema: type[SchemaT],
         client: Client | None = None,
         model: str | None = None,
     ):
@@ -33,7 +37,7 @@ class GeminiLlm:
         self._client = genai.Client(api_key=api_key)
         self._model = "gemini-3-flash-preview"
 
-    def get_response(self, prompt):
+    def get_response(self, prompt: str) -> SchemaT:
         for attempt in range(self._max_retries):
             try:
                 response = self._client.models.generate_content(
@@ -44,6 +48,9 @@ class GeminiLlm:
                         "response_json_schema": self._schema.model_json_schema(),
                     },
                 )
+
+                if response.text is None:
+                    raise RuntimeError("LLM response did not include text")
 
                 validated = self._schema.model_validate_json(response.text)
                 return validated
