@@ -49,6 +49,8 @@ def render(page, output_path, max_width=1600) -> str:
     matrix = fitz.Matrix(zoom, zoom)
     pix = page.get_pixmap(matrix=matrix, alpha=False)
     output_path = Path(output_path)
+    # tmp/ is git-ignored, so a fresh clone has nowhere to render into
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     pix.save(output_path)
     return str(output_path)
 

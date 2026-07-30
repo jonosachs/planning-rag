@@ -83,8 +83,9 @@ echo 'GEMINI_API_KEY=...' > .env
 | Embeddings | `gemini-embedding-001` |
 | Response generation | `gemini-3-flash-preview` |
 
-`.gitignore` excludes `assets/`, `tests/`, `admin/` and `chroma_db/`, so a fresh clone
-has no drawings and no index. The drawings source expects `assets/plans.pdf`.
+`.gitignore` excludes `assets/`, `tests/`, `admin/`, `chroma_db/` and `tmp/`, so a
+fresh clone has no drawings and no index. The drawings source expects
+`assets/plans.pdf`, and renders page images into `tmp/`, which it creates on demand.
 
 ---
 
