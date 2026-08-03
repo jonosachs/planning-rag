@@ -5,6 +5,8 @@ SCHEMES_BASE_URL = "https://api.app.planning.vic.gov.au/planning/v2/schemes/"
 
 
 def fetch_schemes_index() -> list[dict]:
+    """Fetch the master index of all Victorian Planning schemes from the API"""
+
     url = SCHEMES_BASE_URL
     response = httpx.get(url, timeout=30)
     response.raise_for_status()
@@ -14,6 +16,8 @@ def fetch_schemes_index() -> list[dict]:
 
 
 def find_scheme_id_by_title(schemes: list[dict], target_title: str) -> str:
+    """Walk the Planning scheme index and find a target scheme ID"""
+
     for scheme in schemes:
         if scheme["title"] == target_title:
             print(
@@ -25,6 +29,8 @@ def find_scheme_id_by_title(schemes: list[dict], target_title: str) -> str:
 
 
 def fetch_scheme_payload(scheme_id: str) -> dict:
+    """Fetch a specific Planning scheme payload (dict of clauses metadata) using the scheme ID"""
+
     url = f"{SCHEMES_BASE_URL}{scheme_id}"
     response = httpx.get(url, timeout=30)
     response.raise_for_status()
@@ -32,6 +38,11 @@ def fetch_scheme_payload(scheme_id: str) -> dict:
 
 
 def flatten_clause_nodes(clause_nodes: list[dict]) -> list[dict]:
+    """
+    Flatten scheme metadata tree for easier iteration
+    Raw scheme metadata looks like: scheme -> clauses -> subClauses -> sections/schedules
+    """
+
     flattened = []
     child_keys = (
         "subClauses",

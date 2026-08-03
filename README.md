@@ -4,12 +4,6 @@ A retrieval-augmented generation app that answers Victorian planning questions f
 the **ordinance text**, retrieved live from the Victorian planning API, with every
 answer tied back to the clauses it came from.
 
-A second data source reads **architectural drawings** (PDF text features) into the
-same index, so drawings and controls can eventually be queried together.
-
-> **Status:** the planning path works end to end. The drawings source loads but has
-> no chunker of its own yet. See [Current state](#current-state).
-
 ---
 
 ## Pipeline
@@ -34,7 +28,6 @@ clause document is fetched individually and its HTML content converted to text.
 src/
 ├── main.py              # entry points: run_indexing / run_query
 ├── planning/            # DataSource: fetch scheme → flatten clause tree → HTML→text → chunk
-├── drawings/            # DataSource: PDF pages → planning-relevant pages → render → text features → chunk
 ├── indexing/            # DataSource / Embedder / VectorStore interfaces + Gemini + ChromaDB impls
 ├── llm/                 # Gemini wrapper with a Pydantic response schema
 └── query/               # prompt assembly, CLI, citation rendering
@@ -48,10 +41,8 @@ The design point is `src/indexing/interfaces.py`, which defines three ABCs:
 | `Embedder` | `embed_chunks(chunks)`, `embed_text(text)` |
 | `VectorStore` | `write(chunks)`, `run_query(vector)`, `get_all()` |
 
-`run_indexing_pipeline(source, embedder, store)` depends only on those three, so
-planning text and drawings share one indexing path and the Gemini/Chroma choices are
-swappable without touching either source. Adding a third source means implementing
-`DataSource` and nothing else.
+`run_indexing_pipeline(source, embedder, store)` abstracts these three components, so
+indexing tools are flexible. 
 
 ### Data model
 
@@ -74,7 +65,7 @@ site-specific controls from general requirements.
 
 ```sh
 python -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install . 
 echo 'GEMINI_API_KEY=...' > .env
 ```
 
@@ -91,42 +82,18 @@ fresh clone has no drawings and no index. The drawings source expects
 
 ## Running it
 
-There is one entry point; `run_query` seeds the index before every query.
-
 ```sh
 .venv/bin/python -m src.main
 ```
-
-Scheme (`Port Phillip`) and the drawings path are hardcoded in `src/main.py`.
 
 ---
 
 ## Current state
 
-The `refactor: reorganize rag pipeline modules` commit renamed `src/rag/` to
-`src/indexing/` and split the planning pipeline, leaving dangling references that made
-`src.main` unimportable. Those have been repaired: fetch → clean → chunk → write now
-runs, verified against the live API (12 overshadowing clauses → 20 chunks) and against
-a throwaway Chroma collection.
+Project is a work in progress. Currently experimenting with ingesting architectural drawings to cross-reference against planning requirements on branch `experimental/geometry-grounded-extraction`
 
 ### Known issues
 
-- **The drawings source cannot chunk.** `src/drawings/chunk.py` is a copy of the
-  planning chunker — it imports `ClauseDoc` and reads `clause.content`, but
-  `DrawingsSource` feeds it `PageFeautres`, so `batch_chunk` raises `AttributeError`.
-  Drawings need a chunker of their own; what constitutes a chunk of a drawing page,
-  and what metadata it should carry, is still an open design question.
-- `run_indexing` writes planning **and** drawings into the same `planning` collection,
-  so drawing chunks would be retrieved as answers to clause questions.
-- `run_query` calls `run_indexing()` on every invocation, re-fetching and re-embedding
-  the whole scheme before answering.
 - Chunk ids are random UUIDs, so re-indexing duplicates every chunk rather than
   upserting over the previous run.
-- `src/llm/interace.py` is an empty file and a typo for `interface.py` — the `Llm` ABC
-  that would match the other subsystems' interface pattern was never written.
-- `src/drawings/schemas.py` exports `PageFeautres` (typo for `PageFeatures`).
-- `PlanningSource` hardcodes `max_results=100`.
-- `requirements.txt` and `pyproject.toml` list dependencies separately and can drift.
-- `[tool.pytest.ini_options]` is configured but `pytest` is in neither dependency list,
-  and `tests/` is git-ignored, so there is no runnable suite.
-- `pyproject.toml` requires Python `>=3.14`; the working `.venv` is 3.13.14.
+- `tests/` is git-ignored, so there is no runnable suite.

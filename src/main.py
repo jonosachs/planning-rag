@@ -11,6 +11,10 @@ from src.llm.gemini_llm import GeminiLlm
 from dataclasses import dataclass
 
 
+PLANNING_SCHEME = "Port Phillip"
+DB_COLLECTION_NAME = "planning"
+
+
 @dataclass
 class IndexConfig:
     source: DataSource
@@ -21,9 +25,9 @@ class IndexConfig:
 def run_indexing():
     jobs = [
         IndexConfig(
-            source=PlanningSource(planning_scheme="Port Phillip"),
+            source=PlanningSource(planning_scheme=PLANNING_SCHEME),
             embedder=GeminiEmbedder(),
-            store=ChromaDb(collection_name="planning"),
+            store=ChromaDb(collection_name=DB_COLLECTION_NAME),
         )
     ]
     for job in jobs:
@@ -33,9 +37,7 @@ def run_indexing():
 def run_query():
     llm = GeminiLlm(schema=LlmPlanningResponse)
     embedder = GeminiEmbedder()
-    store = ChromaDb(collection_name="planning")
-
-    run_indexing()
+    store = ChromaDb(collection_name=DB_COLLECTION_NAME)
 
     ui = Cli()
     query = ui.get_user_query()
