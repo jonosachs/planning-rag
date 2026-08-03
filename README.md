@@ -60,7 +60,7 @@ site-specific controls from general requirements.
 
 ## Requirements
 
-- Python 3.13+ (`pyproject.toml` declares `>=3.14`; see [Current state](#current-state))
+- Python 3.13+ 
 - A Google Gemini API key
 
 ```sh
