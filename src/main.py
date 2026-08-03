@@ -24,12 +24,7 @@ def run_indexing():
             source=PlanningSource(planning_scheme="Port Phillip"),
             embedder=GeminiEmbedder(),
             store=ChromaDb(collection_name="planning"),
-        ),
-        IndexConfig(
-            source=DrawingsSource(pdf_path="assets/plans.pdf"),
-            embedder=GeminiEmbedder(),
-            store=ChromaDb(collection_name="planning"),
-        ),
+        )
     ]
     for job in jobs:
         run_indexing_pipeline(job.source, job.embedder, job.store)

@@ -12,6 +12,7 @@ class ChromaDb(VectorStore):
     def delete_collection(self):
         try:
             self.client.delete_collection(self.collection)
+            print(f"Deleted collection: {self.collection}")
         except Exception as e:
             raise RuntimeError(f"⚠️ Failed to delete db {self.collection}: {e}") from e
 
