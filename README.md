@@ -82,6 +82,14 @@ fresh clone has no drawings and no index. The drawings source expects
 
 ## Running it
 
+On the first run you need to index the planning data first with the argument `index`. Set global vars for max results and key words in main.py. Defaults to max_results=100, key_words = None.
+
+```sh
+.venv/bin/python -m src.main index
+```
+
+Then run the main routine:
+
 ```sh
 .venv/bin/python -m src.main
 ```

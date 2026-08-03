@@ -5,7 +5,10 @@ from src.planning.pipeline import run_fetch_scheme_pipeline
 
 class PlanningSource(DataSource):
     def __init__(
-        self, planning_scheme: str, key_word: str | None = None, max_results: int = 100
+        self,
+        planning_scheme: str,
+        max_results: int,
+        key_word: str | None,
     ):
         self._planning_scheme = planning_scheme
         self._key_word = key_word
