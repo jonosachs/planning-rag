@@ -1,43 +1,30 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from typing import Optional
 
 
 class PlanningCitation(BaseModel):
+    # Ordered index number for the result (0-based indexing).
+    # Allows LLM to identify an int index rather than recreate the citation label which is error prone
+    citation_index: int
+    citation_id: str
     scheme_id: str
     ordinance_id: str
-    chunk_index: str
+    semantic_num: str
+    chunk_index: int
     title: str
+    content: str
+
+    @computed_field
+    @property
+    def label(self) -> str:
+        return f"{self.citation_id} - {self.title}"
 
 
 class LlmPlanningResponse(BaseModel):
     answer: str = Field(
         description="Answer if it can be deduced from the context. Otherwise say you don't know."
     )
-    citations: Optional[list[PlanningCitation]] = Field(
-        description="""
-        Citations for all context used in your answer. 
-        Only 'None' if the answer is not in the context
-        """,
+    citation_idxs: Optional[list[int]] = Field(
+        description="List the indicies of citations used in your response. Only 'None' if the answer is not in the context",
         default=None,
     )
-
-
-class ExtractedDwgField(BaseModel):
-    value: float | str | None
-    unit: str | None
-    page: int
-    bbox: tuple[float, float, float, float] | None
-    source_text: str
-    confidence: float
-
-
-class DrawingFeature(BaseModel):
-    address: ExtractedDwgField | None = None
-    zone: ExtractedDwgField | None = None
-    building_height_m: ExtractedDwgField | None = None
-    front_setback_m: ExtractedDwgField | None = None
-    side_setbacks_m: list[ExtractedDwgField] = Field(default_factory=list)
-    rear_setback_m: ExtractedDwgField | None = None
-    site_coverage_percent: ExtractedDwgField | None = None
-    permeability_percent: ExtractedDwgField | None = None
-    private_open_space_m2: ExtractedDwgField | None = None
