@@ -1,71 +1,78 @@
+from src.query.pipeline import run_query_pipeline
 from src.query.schemas import LlmPlanningResponse
-from src.query.prompt import package_prompt
 from src.query.cli import Cli
 from src.planning.service import PlanningSource
-from src.indexing.interfaces import DataSource, Embedder, VectorStore
 from src.indexing.gemini_embedder import GeminiEmbedder
 from src.indexing.chromadb import ChromaDb
 from src.indexing.pipeline import run_indexing_pipeline
 from src.llm.gemini_llm import GeminiLlm
-from dataclasses import dataclass
-import sys
 import argparse
 
 
-PLANNING_SCHEME = "Port Phillip"
 DB_COLLECTION_NAME = "planning"
-MAX_RESULTS = 100
-KEY_WORDS = None  # Can be used to filter for specific clauses e.g. "overshadow"
 
-
-@dataclass
-class IndexConfig:
-    source: DataSource
-    embedder: Embedder
-    store: VectorStore
+# Planning scheme API filters
+PLANNING_SCHEME = "Port Phillip"
+MAX_RESULTS: int | None = None
+KEY_WORD: str | None = None
 
 
 def run_indexing(
     planning_scheme=PLANNING_SCHEME,
     collection=DB_COLLECTION_NAME,
     max_results=MAX_RESULTS,
-    key_words=KEY_WORDS,
+    key_word=KEY_WORD,
 ):
-    jobs = [
-        IndexConfig(
-            source=PlanningSource(
-                planning_scheme=planning_scheme,
-                key_word=key_words,
-                max_results=max_results,
-            ),
-            embedder=GeminiEmbedder(),
-            store=ChromaDb(collection_name=collection),
-        )
-    ]
-    for job in jobs:
-        run_indexing_pipeline(job.source, job.embedder, job.store)
+    """Ingest, chunk, embedd and store Planning Scheme data"""
 
-
-def run_query(collection=DB_COLLECTION_NAME):
-    llm = GeminiLlm(schema=LlmPlanningResponse)
+    source = PlanningSource(
+        planning_scheme=planning_scheme,
+        key_word=key_word,
+        max_results=max_results,
+    )
     embedder = GeminiEmbedder()
     store = ChromaDb(collection_name=collection)
 
-    ui = Cli()
-    query = ui.get_user_query()
-    embedded_query = embedder.embed_text(query)
-    query_context = store.run_query(embedded_query)
-    prompt = package_prompt(query, query_context)
+    run_indexing_pipeline(source, embedder, store)
 
-    response = llm.get_response(prompt)
-    ui.show_cited_response(response)
+
+def run_query():
+    ui = Cli()
+    llm = GeminiLlm(schema=LlmPlanningResponse)
+    embedder = GeminiEmbedder()
+    store = ChromaDb(collection_name=DB_COLLECTION_NAME)
+
+    run_query_pipeline(ui, llm, embedder, store)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--index", action="store_true", help="Index planning data")
+    sub = parser.add_subparsers(dest="command", required=False)
+
+    index = sub.add_parser(
+        "index", help="Ingest, chunk, embedd and store Planning Scheme data"
+    )
+    index.add_argument(
+        "--key-word",
+        nargs="?",
+        default=None,
+        help="Only index clauses with title containing key word",
+    )
+    index.add_argument("--scheme", default=PLANNING_SCHEME)
+    index.add_argument(
+        "--max-results",
+        type=int,
+        help="Cap number of results returned from Planning Scheme API",
+        default=MAX_RESULTS,
+    )
+
     args = parser.parse_args()
-    if args.index:
-        run_indexing()
+
+    if args.command:
+        run_indexing(
+            planning_scheme=args.scheme,
+            max_results=args.max_results,
+            key_word=args.key_word,
+        )
     else:
         run_query()
