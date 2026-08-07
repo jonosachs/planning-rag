@@ -9,11 +9,10 @@
     "python-dotenv",
     "chromadb",
     "pydantic",
-    "pymupdf",
   ]
 
 [dependency-groups]
-  dev = ["pytest"]
+  dev = ["pytest", "ruff", "pyright"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
