@@ -5,11 +5,12 @@ from google.genai import errors
 import time
 from google.genai.client import Client
 from pydantic import BaseModel
+from src.llm.interface import Llm
 
 load_dotenv()
 
 
-class GeminiLlm:
+class GeminiLlm(Llm):
     def __init__(
         self,
         schema: type[BaseModel],
@@ -33,13 +34,14 @@ class GeminiLlm:
         self._client = genai.Client(api_key=api_key)
         self._model = "gemini-3-flash-preview"
 
-    def get_response(self, prompt):
+    def get_response(self, sys_prompt, data) -> BaseModel:
         for attempt in range(self._max_retries):
             try:
                 response = self._client.models.generate_content(
                     model=self._model,
-                    contents=prompt,
+                    contents=data,
                     config={
+                        "system_instruction": sys_prompt,
                         "response_mime_type": "application/json",
                         "response_json_schema": self._schema.model_json_schema(),
                     },
@@ -51,8 +53,4 @@ class GeminiLlm:
             except errors.APIError as e:
                 if attempt < self._max_retries - 1:
                     print(f"⚠️ API error {e} retrying..")
-                    time.sleep(3**attempt)  # exponential backoff
-            except Exception as e:
-                raise RuntimeError("⚠️ Unexpected error") from e
-
-        raise RuntimeError("⚠️ Could not resolve API error")
+                    time.sleep(30**attempt)  # exponential backoff
