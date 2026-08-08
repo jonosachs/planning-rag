@@ -23,6 +23,11 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
     chunk_index = 0
     text = ""
     paragraphs = clause.content.split("\n")
+    header = ""
+
+    # Include the parent title so the context is retained when embedded
+    if clause.parent_title:
+        header = clause.parent_title.strip() + "\n"
 
     for p in paragraphs:
         combined = text + "\n" + p
@@ -30,7 +35,7 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
             text += p + "\n"
         else:
             chunk = Chunk(
-                text=text.strip(),
+                text=header + text.strip(),
                 metadata=build_metadata(clause, chunk_index),
             )
             chunks.append(chunk)
@@ -38,7 +43,7 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
             text = p + "\n"
 
     chunk = Chunk(
-        text=text.strip(),
+        text=header + text.strip(),
         metadata=build_metadata(clause, chunk_index),
     )
     chunks.append(chunk)
@@ -47,16 +52,18 @@ def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
 
 
 def build_metadata(cd: ClauseDoc, chunk_index: int) -> dict:
-    # Chunk.metadata is a plain dict so the indexing layer stays source-agnostic;
-    # ClauseMetaData still validates the shape on the way out.
     metadata = ClauseMetaData(
         ordinance_id=cd.ordinance_id,
         ordinance_type=cd.ordinance_type,
         ordinance_level=cd.ordinance_level,
         scheme_id=cd.scheme_id,
+        semantic_num=cd.semantic_num,
         gazettal_date=cd.gazettal_date,
         amendment_number=cd.amendment_number,
         title=cd.title,
         chunk_index=chunk_index,
+        parent_ordinance_id=cd.parent_ordinance_id or "",
+        parent_title=cd.parent_title or "",
     )
+    # Returns dump of object (dict) as chromaDB cannot work with a pydantic model
     return metadata.model_dump()

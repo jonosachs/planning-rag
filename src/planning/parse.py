@@ -2,48 +2,44 @@ from bs4 import BeautifulSoup as bs
 from src.planning.schemas import ClauseDoc, ClauseRef
 
 
-def build_clause_docs(clause_docs: list[dict]) -> list[ClauseDoc]:
-    clauses = []
+def build_clause_docs(clause_payloads: list[dict]) -> list[ClauseDoc]:
+    clause_docs = []
 
-    for c in clause_docs:
-        # Each clause payload names its own scheme, so the id does not have to be
-        # threaded down from the caller.
-        scheme_id = c["planningScheme"]["schemeID"]
+    for cp in clause_payloads:
+        scheme_id = cp["planningScheme"]["schemeID"]
         clause = ClauseDoc(
-            ordinance_id=c["ordinanceID"],
-            ordinance_type=c["ordinanceType"],
-            ordinance_level=c["ordinanceLevel"],
+            ordinance_id=cp["ordinanceID"],
+            ordinance_type=cp["ordinanceType"],
+            ordinance_level=cp["ordinanceLevel"],
             scheme_id=scheme_id,
-            gazettal_date=c["gazettalDate"],
-            amendment_number=c["amendmentNumber"],
-            title=c["title"],
-            content=c.get("content"),
+            semantic_num=cp["semanticNumber"],
+            gazettal_date=cp["gazettalDate"],
+            amendment_number=cp["amendmentNumber"],
+            title=cp["title"],
+            content=convert_html_to_text(cp.get("content")),
+            parent_ordinance_id=cp.get("parentOrdinance", {}).get("ordinanceID"),
+            parent_title=cp.get("parentOrdinance", {}).get("title"),
         )
-        clauses.append(clause)
+        clause_docs.append(clause)
 
-    return clauses
+    return clause_docs
 
 
-def convert_html_to_text(content_html):
-    soup = bs(content_html, "html.parser")
-    content_text = soup.get_text(separator="\n", strip=True)
-    return content_text
+def convert_html_to_text(html) -> str:
+    soup = bs(html, "html.parser")
+    text = soup.get_text(separator="\n", strip=True)
+    return text
 
 
 def build_clause_refs(scheme_id: str, clause_nodes: list[dict]) -> list[ClauseRef]:
-    normalised = []
+    clause_refs = []
 
-    for cn in clause_nodes:
-        clause_ref = parse_as_clause_ref(cn, scheme_id)
-        normalised.append(clause_ref)
+    for node in clause_nodes:
+        ref = ClauseRef(
+            ordinance_id=node["ordinanceID"],
+            title=node["title"],
+            scheme_id=scheme_id,
+        )
+        clause_refs.append(ref)
 
-    return normalised
-
-
-def parse_as_clause_ref(data, scheme_id) -> ClauseRef:
-    clause_ref = ClauseRef(
-        ordinance_id=data["ordinanceID"],
-        title=data["title"],
-        scheme_id=scheme_id,
-    )
-    return clause_ref
+    return clause_refs
