@@ -105,3 +105,10 @@ Project is a work in progress. Currently experimenting with ingesting architectu
 - Chunk ids are random UUIDs, so re-indexing duplicates every chunk rather than
   upserting over the previous run.
 - `tests/` is git-ignored, so there is no runnable suite.
+
+### Debugging
+
+`ruff check src tests`        # lint: unused imports, dead code, bug-prone patterns
+`ruff format src tests`       # formatting (Black-compatible)
+`pyright src`                 # type checking
+
