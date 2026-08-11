@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from src.query.prompt import Prompt
+from dataclasses import dataclass
+
+
+@dataclass
+class Prompt:
+    system_prompt: str
+    contents: str
 
 
 class Llm(ABC):

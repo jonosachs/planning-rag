@@ -59,7 +59,7 @@ def get_header(clause: ClauseDoc) -> str:
     return header
 
 
-def add_header(header, text):
+def add_header(header: str, text: str) -> str:
     return f"{header.strip()}\n{text.strip()}" if header else text.strip()
 
 

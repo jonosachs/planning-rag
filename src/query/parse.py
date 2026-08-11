@@ -42,10 +42,6 @@ def group_by_section(
 ) -> dict[str, list[PlanningCitation]]:
     by_section = {}
     for c in sorted(citations, key=lambda c: c.ordinance_id):
-        if c.section:
-            by_section.setdefault(c.section or c.title, []).append(c)
+        by_section.setdefault(c.section or c.title, []).append(c)
 
     return by_section
-
-
-# by_section = {"43 HERITAGE AND BUILT FORM OVERLAYS": [sectionObj, sectionObj]}

@@ -1,12 +1,11 @@
-import os
-from dotenv import load_dotenv
+from src.llm.interface import Llm, Prompt
 from google import genai
 from google.genai import errors
-import time
 from google.genai.client import Client
 from pydantic import BaseModel
-from src.llm.interface import Llm
-from src.query.prompt import Prompt
+from dotenv import load_dotenv
+import os
+import time
 
 load_dotenv()
 
