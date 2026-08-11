@@ -9,16 +9,18 @@ answer tied back to the clauses it came from.
 ## Pipeline
 
 ```text
-Index: load:  →  chunk:  →  embed  →  vector store
+Index: load  →  chunk  →  embed  →  vector store
 Query: embed query  →  retrieve (vector similarity)  →  prompt (query + context)  →  cited answer
 ```
 
 Source API: `https://api.app.planning.vic.gov.au/planning/v2/schemes/`
 
 A scheme payload nests clause references several levels deep
-(`scheme → clauses → subClauses → sections → schedules`). `flatten_clause_nodes`
-flattens that tree, the refs are optionally filtered by keyword and capped, then each
-clause document is fetched individually and its HTML content converted to text.
+(`scheme → clauses → subClauses → sections → schedules`). `flatten_clause_ref_nodes`
+recursively flattens that tree, carrying the overarching clause title down to its
+children as a `section` tag. The refs are optionally filtered by keyword and capped,
+then each clause document is fetched individually and its HTML content converted to
+text.
 
 ---
 
@@ -29,8 +31,8 @@ src/
 ├── main.py              # entry points: run_indexing / run_query
 ├── planning/            # DataSource: fetch scheme → flatten clause tree → HTML→text → chunk
 ├── indexing/            # DataSource / Embedder / VectorStore interfaces + Gemini + ChromaDB impls
-├── llm/                 # Gemini wrapper with a Pydantic response schema
-└── query/               # prompt assembly, CLI, citation rendering
+├── llm/                 # Llm ABC + Prompt, and a Gemini wrapper with a Pydantic response schema
+└── query/               # prompt assembly, citation parsing/grouping, CLI rendering
 ```
 
 The design point is `src/indexing/interfaces.py`, which defines three ABCs:
@@ -47,17 +49,23 @@ indexing tools are flexible.
 ### Data model
 
 ```text
-Index: ClauseRef -> ClauseDoc -> ClauseMetaData -> Chunk -> EmbeddedChunk
-Query: PlanningCitation -> LlmPlanningResponse 
+Index: ClauseRef → ClauseDoc → Chunk (+ ClauseMetaData) → EmbeddedChunk
+Query: PlanningCitation → Prompt → LlmPlanningResponse → citations grouped by section
 ```
 
-`ClauseRef` (id + title, enough to fetch) → `ClauseDoc` (full clause with content and
-gazettal metadata) → `Chunk` (≤750 chars, split on paragraph boundaries, carrying
-`ClauseMetaData`). The metadata is what surfaces as citations, so chunking preserves
-`ordinance_id`, `title` and `chunk_index` per chunk.
+`ClauseRef` (id, title, section, enough to fetch) → `ClauseDoc` (full clause with
+content and gazettal metadata) → `Chunk` (~750 chars, split on paragraph boundaries and
+allowed to overshoot rather than break one, carrying `ClauseMetaData`). `ClauseDoc` and
+`ClauseMetaData` share a `ClauseFields` base, so metadata is a dump of the clause minus
+its content, plus `chunk_index`. Optional fields default to `""` because ChromaDB
+cannot store `None`. Each chunk's text is prefixed with its section and parent title so
+the embedding keeps that context.
 
-Answers come back as a `LlmPlanningResponse` — a Pydantic schema passed to Gemini as a
-structured-output spec, so citations are parsed rather than scraped out of prose. The
+Retrieved chunks become `PlanningCitation` objects with a 0-based `citation_index`, and
+the context block labels each one with that index. Answers come back as a
+`LlmPlanningResponse` — a Pydantic schema passed to Gemini as a structured-output spec —
+where `citation_idxs` points back at the indexes used, so citations are matched by index
+rather than scraped out of prose. The CLI groups the selected citations by section. The
 system prompt constrains the model to the retrieved context and tells it to distinguish
 site-specific controls from general requirements.
 
@@ -79,18 +87,20 @@ echo 'GEMINI_API_KEY=...' > .env
 | Embeddings | `gemini-embedding-001` |
 | Response generation | `gemini-3-flash-preview` |
 
-`.gitignore` excludes `assets/`, `tests/`, `admin/`, `chroma_db/` and `tmp/`, so a
-fresh clone has no drawings and no index. The drawings source expects
-`assets/plans.pdf`, and renders page images into `tmp/`, which it creates on demand.
+`.gitignore` excludes `assets/`, `tests/`, `admin/`, `chroma_db/`, `tmp/` and the tool
+caches, so a fresh clone has no index and has to be indexed before it can be queried.
 
 ---
 
 ## Running it
 
-On the first run you need to index the planning data first with the argument `index`. Set global vars for max results and key words in main.py. Defaults to max_results=100, key_words = None.
+On the first run you need to index the planning data first with the argument `index`.
+The defaults live in `src/main.py` (`PLANNING_SCHEME = "Port Phillip"`,
+`MAX_RESULTS = None`, `KEY_WORD = None`) and each can be overridden per run:
 
 ```sh
 .venv/bin/python -m src.main index
+.venv/bin/python -m src.main index --scheme "Port Phillip" --key-word heritage --max-results 100
 ```
 
 Then run the main routine:
@@ -107,8 +117,9 @@ Project is a work in progress. Currently experimenting with ingesting architectu
 
 ### Known issues
 
-- Chunk ids are random UUIDs, so re-indexing duplicates every chunk rather than
-  upserting over the previous run.
+- Chunk ids are `scheme_id:ordinance_id:chunk_index` and upserted, so re-indexing
+  overwrites in place — but if a clause chunks into fewer pieces than last run, the
+  leftover high-index chunks stay in the collection.
 - `tests/` is git-ignored, so there is no runnable suite.
 
 ### Debugging
