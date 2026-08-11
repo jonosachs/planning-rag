@@ -40,10 +40,12 @@ def fetch_scheme_payload(scheme_id: str) -> dict:
     return response.json()
 
 
-def flatten_clause_ref_nodes(clause_nodes: list[dict]) -> list[dict]:
+def flatten_clause_ref_nodes(
+    clause_nodes: list[dict], parent: str | None = None
+) -> list[dict]:
     """
-    Flatten clause references tree for easier iteration
-    Raw clause references looks like: clauses -> subClauses -> sections/schedules
+    Recursively flatten clause references tree for easier traversal
+    Raw clause references look like: clauses -> subClauses -> sections/schedules
     """
 
     flattened = []
@@ -58,13 +60,19 @@ def flatten_clause_ref_nodes(clause_nodes: list[dict]) -> list[dict]:
     for node in clause_nodes:
         # Get the highest level clause references (excluding any nested clauses)
         flat_node = {key: value for key, value in node.items() if key not in child_keys}
+        # Propagate the overarching parent section through to children
+        # Direct parents are already in the returned fields
+        if flat_node.get("ordinanceType") == "Clause":
+            parent = node.get("title")
+        else:
+            flat_node["section"] = parent
+
         flattened.append(flat_node)
 
-        # Recursively add any nested sub-clause references as standalone entries
-        # Parent info is contained in each clause playload
+        # Recursively flatten any nested sub-clause references
         for key in child_keys:
             if node.get(key):
-                flattened.extend(flatten_clause_ref_nodes(node[key]))
+                flattened.extend(flatten_clause_ref_nodes(node[key], parent))
 
     return flattened
 
@@ -76,6 +84,8 @@ def fetch_clause_payloads(clause_refs: list[ClauseRef]) -> list[dict]:
         clause_header = f"{ref.title} {ref.ordinance_id}"
         try:
             clause_doc = fetch_a_clause_document(ref)
+            # Retain the section tag added during clause flattening
+            clause_doc["section"] = ref.section
             clause_docs.append(clause_doc)
             print(f"✅ Fetched clause: {clause_header}")
         except httpx.HTTPStatusError as e:
@@ -128,6 +138,5 @@ def fetch_clause_refs(
         clause_nodes = clause_nodes[:max_results]
         print(f"✂️ Trimmed to {len(clause_nodes)} results")
 
-    # Convert to ClauseRef objects here so scheme_id never leaves this function -
-    # each ref carries it from now on.
+    # Propagate scheme_id in clause refs
     return build_clause_refs(scheme_id, clause_nodes)

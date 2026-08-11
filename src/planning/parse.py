@@ -17,6 +17,7 @@ def build_clause_docs(clause_payloads: list[dict]) -> list[ClauseDoc]:
             amendment_number=cp["amendmentNumber"],
             title=cp["title"],
             content=convert_html_to_text(cp.get("content")),
+            section=cp.get("section", ""),
             parent_ordinance_id=cp.get("parentOrdinance", {}).get("ordinanceID"),
             parent_title=cp.get("parentOrdinance", {}).get("title"),
         )
@@ -38,6 +39,7 @@ def build_clause_refs(scheme_id: str, clause_nodes: list[dict]) -> list[ClauseRe
         ref = ClauseRef(
             ordinance_id=node["ordinanceID"],
             title=node["title"],
+            section=node.get("section", ""),
             scheme_id=scheme_id,
         )
         clause_refs.append(ref)

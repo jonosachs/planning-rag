@@ -16,54 +16,56 @@ def batch_chunk(clause_docs: list[ClauseDoc]):
 
 
 def chunk_clause(clause: ClauseDoc, max_chars: int = 750) -> list[Chunk]:
+    """Break clause text into chunks with metadata"""
+
     if not clause.content:
         return []
 
+    # Include section and parent header in each chunk to retain context when embedded
+    header = get_header(clause)
+
     chunks = []
-    chunk_index = 0
-    text = ""
-    paragraphs = clause.content.split("\n")
-    header = ""
+    text_bucket = ""
 
-    # Include the parent title so the context is retained when embedded
-    if clause.parent_title:
-        header = clause.parent_title.strip() + "\n"
-
-    for p in paragraphs:
-        combined = text + "\n" + p
-        if len(combined) <= max_chars:
-            text += p + "\n"
-        else:
-            chunk = Chunk(
-                text=header + text.strip(),
-                metadata=build_metadata(clause, chunk_index),
+    for paragraph in clause.content.split("\n"):
+        text_bucket += paragraph + "\n"
+        # Allow overshooting max chars. Ignore header length
+        if len(text_bucket) >= max_chars:
+            chunks.append(
+                Chunk(
+                    text=add_header(header, text_bucket),
+                    metadata=build_metadata(clause, len(chunks)),
+                )
             )
-            chunks.append(chunk)
-            chunk_index += 1
-            text = p + "\n"
+            text_bucket = ""
 
-    chunk = Chunk(
-        text=header + text.strip(),
-        metadata=build_metadata(clause, chunk_index),
-    )
-    chunks.append(chunk)
+    # Capture any left-over text
+    if text_bucket.strip():
+        chunk = Chunk(
+            text=add_header(header, text_bucket),
+            metadata=build_metadata(clause, len(chunks)),
+        )
+        chunks.append(chunk)
 
     return chunks
 
 
-def build_metadata(cd: ClauseDoc, chunk_index: int) -> dict:
-    metadata = ClauseMetaData(
-        ordinance_id=cd.ordinance_id,
-        ordinance_type=cd.ordinance_type,
-        ordinance_level=cd.ordinance_level,
-        scheme_id=cd.scheme_id,
-        semantic_num=cd.semantic_num,
-        gazettal_date=cd.gazettal_date,
-        amendment_number=cd.amendment_number,
-        title=cd.title,
+def get_header(clause: ClauseDoc) -> str:
+    header = ""
+    if clause.section:
+        header += f"{clause.section.strip()}\n"
+    if clause.parent_title:
+        header += f"{clause.parent_title.strip()}\n"
+    return header
+
+
+def add_header(header, text):
+    return f"{header.strip()}\n{text.strip()}" if header else text.strip()
+
+
+def build_metadata(clause: ClauseDoc, chunk_index: int) -> dict:
+    return ClauseMetaData(
+        # Exclude content as it's already stored in Chroma's 'documents' field
+        **clause.model_dump(exclude={"content"}),
         chunk_index=chunk_index,
-        parent_ordinance_id=cd.parent_ordinance_id or "",
-        parent_title=cd.parent_title or "",
-    )
-    # Returns dump of object (dict) as chromaDB cannot work with a pydantic model
-    return metadata.model_dump()
+    ).model_dump()
