@@ -6,6 +6,7 @@ import time
 from google.genai.client import Client
 from pydantic import BaseModel
 from src.llm.interface import Llm
+from src.query.prompt import Prompt
 
 load_dotenv()
 
@@ -34,14 +35,14 @@ class GeminiLlm(Llm):
         self._client = genai.Client(api_key=api_key)
         self._model = "gemini-3-flash-preview"
 
-    def get_response(self, sys_prompt, data) -> BaseModel:
+    def get_response(self, prompt: Prompt) -> BaseModel:
         for attempt in range(self._max_retries):
             try:
                 response = self._client.models.generate_content(
                     model=self._model,
-                    contents=data,
+                    contents=prompt.contents,
                     config={
-                        "system_instruction": sys_prompt,
+                        "system_instruction": prompt.system_prompt,
                         "response_mime_type": "application/json",
                         "response_json_schema": self._schema.model_json_schema(),
                     },

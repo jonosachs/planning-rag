@@ -10,8 +10,10 @@ class PlanningCitation(BaseModel):
     scheme_id: str
     ordinance_id: str
     semantic_num: str
+    section: str = ""
     chunk_index: int
     title: str
+    parent_title: str = ""
     content: str
 
     @computed_field

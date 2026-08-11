@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from src.query.schemas import PlanningCitation
+
 
 class UserInterface(ABC):
     @abstractmethod
@@ -7,5 +9,7 @@ class UserInterface(ABC):
         pass
 
     @abstractmethod
-    def show_cited_response(self, response) -> None:
+    def show_cited_response(
+        self, answer: str, cited: dict[str, list[PlanningCitation]]
+    ) -> None:
         pass
