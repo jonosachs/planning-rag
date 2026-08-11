@@ -9,8 +9,8 @@ answer tied back to the clauses it came from.
 ## Pipeline
 
 ```text
-Index:  load  →  chunk  →  embed  →  ChromaDB
-Query:  embed query  →  retrieve (vector similarity)  →  prompt (query + context)  →  cited answer
+Index: load:  →  chunk:  →  embed  →  vector store
+Query: embed query  →  retrieve (vector similarity)  →  prompt (query + context)  →  cited answer
 ```
 
 Source API: `https://api.app.planning.vic.gov.au/planning/v2/schemes/`
@@ -45,6 +45,11 @@ The design point is `src/indexing/interfaces.py`, which defines three ABCs:
 indexing tools are flexible. 
 
 ### Data model
+
+```text
+Index: ClauseRef -> ClauseDoc -> ClauseMetaData -> Chunk -> EmbeddedChunk
+Query: PlanningCitation -> LlmPlanningResponse 
+```
 
 `ClauseRef` (id + title, enough to fetch) → `ClauseDoc` (full clause with content and
 gazettal metadata) → `Chunk` (≤750 chars, split on paragraph boundaries, carrying
